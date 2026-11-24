@@ -138,7 +138,8 @@ export class Renderer {
     // charms
     game.rings.forEach((r, i) => {
       if (r.gone) return;
-      const a = r.g + Math.PI;
+      this.badge(game, r, dx(i));
+      const a = game.charmAngle(i);
       this.bead(r.x + dx(i) + Math.cos(a) * r.r, r.y + Math.sin(a) * r.r, r.c, 11);
     });
     // flying charms + particles
@@ -164,14 +165,14 @@ export class Renderer {
     let x: number, y: number, press: boolean;
     if (h.type === 'rotate') {
       const d = Math.atan2(Math.sin(h.target - r.g), Math.cos(h.target - r.g));
-      const start = r.g + Math.PI, e = t < 0.15 ? 0 : t > 0.75 ? 1 : (t - 0.15) / 0.6;
+      const start = game.charmAngle(h.ring), e = t < 0.15 ? 0 : t > 0.75 ? 1 : (t - 0.15) / 0.6;
       const ease = e * e * (3 - 2 * e), a = start + d * ease;
       // path guide
       ctx.save(); ctx.globalAlpha = 0.35 * fade; ctx.setLineDash([4, 6]); ctx.lineWidth = 3; ctx.strokeStyle = '#fff';
       ctx.beginPath(); ctx.arc(r.x, r.y, r.r + 18, Math.min(start, start + d), Math.max(start, start + d)); ctx.stroke(); ctx.restore();
       x = r.x + Math.cos(a) * r.r; y = r.y + Math.sin(a) * r.r; press = t > 0.1 && t < 0.8;
     } else {
-      const a = r.g + Math.PI;
+      const a = game.charmAngle(h.ring);
       x = r.x + Math.cos(a) * r.r; y = r.y + Math.sin(a) * r.r; press = t > 0.3 && t < 0.5;
       if (press) { ctx.save(); ctx.globalAlpha = 0.5 * fade; ctx.strokeStyle = '#ffe08a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 18 + (t - 0.3) * 60, 0, 7); ctx.stroke(); ctx.restore(); }
     }
@@ -189,16 +190,41 @@ export class Renderer {
     ctx.beginPath();
     let pen = false;
     for (let a = a0; a <= a1 + 1e-6; a += 0.03) {
-      const inGap = Math.abs(Math.atan2(Math.sin(a - r.g), Math.cos(a - r.g))) < GAPH;
+      const inGap = Math.abs(Math.atan2(Math.sin(a - r.g), Math.cos(a - r.g))) < GAPH || (r.twin && Math.abs(Math.atan2(Math.sin(a - r.g - Math.PI), Math.cos(a - r.g - Math.PI))) < GAPH);
       const x = r.x + Math.cos(a) * rad, y = r.y + Math.sin(a) * rad;
       if (!inGap) { if (pen) ctx.lineTo(x, y); else ctx.moveTo(x, y); pen = true; } else pen = false;
     }
     ctx.lineWidth = w; ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.stroke();
   }
   private ringBody(r: Ring, a0: number, a1: number): void {
-    this.arc(r, a0, a1, 15, 'rgba(20,4,16,.55)');
+    this.arc(r, a0, a1, 15, r.fixed ? '#cfd3da' : 'rgba(20,4,16,.55)');
     this.arc(r, a0, a1, 11, COL[r.c].c);
     this.arc(r, a0, a1, 2.5, COL[r.c].l, r.r - 2.5);
+    if (r.ice !== null) {
+      const frost = r.ice > 0 ? 'rgba(200,240,255,.9)' : '#eef6fb';
+      this.arc(r, a0, a1, 3, frost, r.r + 6);
+      this.arc(r, a0, a1, 3, frost, r.r - 6);
+    }
+  }
+  /** Mechanic badge in the middle of a ring: bolt (fixed), padlock (lock), ice counter. */
+  private badge(game: Game, r: Ring, dx: number): void {
+    const ctx = this.ctx, x = r.x + dx, y = r.y;
+    if (r.fixed) {
+      ctx.save(); ctx.translate(x, y); ctx.fillStyle = '#cfd3da'; ctx.strokeStyle = '#2a0d22'; ctx.lineWidth = 2;
+      ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = (k * Math.PI) / 3; ctx.lineTo(Math.cos(a) * 11, Math.sin(a) * 11); } ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, 4, 0, 7); ctx.fillStyle = '#6b6f78'; ctx.fill(); ctx.restore();
+    }
+    if (r.lock && game.merges < 1) {
+      ctx.save(); ctx.translate(x, y + (r.fixed ? 22 : 0)); ctx.strokeStyle = '#e3c473'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, -5, 6, Math.PI, 0); ctx.stroke();
+      ctx.fillStyle = '#e3c473'; ctx.beginPath(); ctx.roundRect(-9, -5, 18, 14, 3); ctx.fill();
+      ctx.fillStyle = '#2a0d22'; ctx.beginPath(); ctx.arc(0, 1, 2.5, 0, 7); ctx.fill(); ctx.restore();
+    }
+    if (r.ice !== null) {
+      ctx.save(); ctx.font = '600 15px Fredoka, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(190,235,255,.9)'; ctx.beginPath(); ctx.arc(x, y - (r.lock ? 22 : 0), 11, 0, 7); ctx.fill();
+      ctx.fillStyle = '#123a52'; ctx.fillText(String(r.ice), x, y + 1 - (r.lock ? 22 : 0)); ctx.restore();
+    }
   }
   private bead(x: number, y: number, c: Color, rad: number): void {
     const ctx = this.ctx, k = COL[c], s = rad * 0.45;

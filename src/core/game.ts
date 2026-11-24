@@ -4,7 +4,24 @@ import type { Color, Layout, LevelSpec } from '../levels/levels';
 export const TRAY_SLOTS = 5;
 export const MERGE_COUNT = 3;
 
-export interface Ring { x: number; y: number; r: number; c: Color; g: number; gone: boolean; pins: number[] }
+export interface Ring {
+  x: number; y: number; r: number; c: Color;
+  /** gap angle (radians) */
+  g: number;
+  gone: boolean;
+  pins: number[];
+  /** cannot be rotated */
+  fixed: boolean;
+  /** has a second gap opposite the first */
+  twin: boolean;
+  /** padlocked until the first merge in the tray */
+  lock: boolean;
+  /** rotations left for an ice ring (null = not ice) */
+  ice: number | null;
+}
+
+/** Max rotations of an ice ring. */
+export const ICE_ROTATIONS = 2;
 export interface Link { a: number; b: number; p: [Pt, Pt] }
 
 export type GameEvent =
@@ -30,6 +47,8 @@ export class Game {
   /** charms released but not yet landed in the tray (animation in flight) */
   inFlight = 0;
   moves: number;
+  /** number of merges so far (opens lock rings) */
+  merges = 0;
   state: GameState = 'play';
   private listeners: ((e: GameEvent) => void)[] = [];
 
@@ -37,6 +56,8 @@ export class Game {
     this.moves = spec.moves;
     this.rings = layout.pts.map(([x, y], i) => ({
       x, y, r: layout.r, c: spec.colors[i], g: (spec.gaps[i] * Math.PI) / 180, gone: false, pins: [],
+      fixed: !!spec.fixed?.includes(i), twin: !!spec.twin?.includes(i), lock: !!spec.lock?.includes(i),
+      ice: spec.ice?.includes(i) ? ICE_ROTATIONS : null,
     }));
     spec.pins.forEach(([i, deg]) => this.rings[i].pins.push((deg * Math.PI) / 180));
     for (let i = 0; i < this.rings.length; i++)
@@ -49,14 +70,21 @@ export class Game {
   on(fn: (e: GameEvent) => void): void { this.listeners.push(fn); }
   private emit(e: GameEvent): void { this.listeners.forEach(f => f(e)); }
 
-  covers(i: number, p: Pt): boolean { const r = this.rings[i]; return angDiff(angleOf(r, p), r.g) < GAP; }
-  inGap(i: number, angle: number): boolean { return angDiff(angle, this.rings[i].g) < GAP; }
+  /** Is this angle inside ring i's gap (or its second gap for twin rings)? */
+  inGap(i: number, angle: number): boolean {
+    const r = this.rings[i];
+    return angDiff(angle, r.g) < GAP || (r.twin && angDiff(angle, r.g + Math.PI) < GAP);
+  }
+  covers(i: number, p: Pt): boolean { return this.inGap(i, angleOf(this.rings[i], p)); }
+  /** Where the charm hangs on the ring (opposite the gap; between the gaps for twin rings). */
+  charmAngle(i: number): number { const r = this.rings[i]; return r.g + (r.twin ? Math.PI / 2 : Math.PI); }
   linkOpen(L: Link): boolean { return L.p.some(p => this.covers(L.a, p) || this.covers(L.b, p)); }
 
   /** Free = every pin on the ring is inside its gap and every link to a present ring is open. */
   isFree(i: number): boolean {
     const r = this.rings[i];
     if (r.gone) return false;
+    if (r.lock && this.merges < 1) return false;
     if (r.pins.some(a => !this.inGap(i, a))) return false;
     return this.links.every(L => {
       if (L.a !== i && L.b !== i) return true;
@@ -67,8 +95,10 @@ export class Game {
 
   anyFree(): boolean { return this.rings.some((_, i) => this.isFree(i)); }
 
-  /** Can the player start rotating ring i? (no moves left → only free rings react) */
-  canRotate(i: number): boolean { return this.state === 'play' && !this.rings[i].gone && this.moves > 0; }
+  /** Can ring i ever turn again? (fixed rings never; ice rings only while they have rotations left) */
+  rotatable(i: number): boolean { const r = this.rings[i]; return !r.gone && !r.fixed && (r.ice === null || r.ice > 0); }
+  /** Can the player rotate ring i right now? */
+  canRotate(i: number): boolean { return this.state === 'play' && this.moves > 0 && this.rotatable(i); }
 
   /** Rotate during a drag. Emits becameFree when the ring turns free. */
   rotate(i: number, delta: number): void {
@@ -78,10 +108,12 @@ export class Game {
     if (!was && this.isFree(i)) this.emit({ type: 'becameFree', ring: i });
   }
 
-  /** Call when a drag ends. Counts one move if the ring turned far enough. */
-  endDrag(totalTurn: number): void {
+  /** Call when a drag of ring i ends. Counts one move (and one ice charge) if it turned far enough. */
+  endDrag(totalTurn: number, i?: number): void {
     if (this.state !== 'play' || totalTurn <= MOVE_THRESHOLD) return;
     this.moves = Math.max(0, this.moves - 1);
+    const r = i === undefined ? undefined : this.rings[i];
+    if (r && r.ice !== null) r.ice = Math.max(0, r.ice - 1);
     this.emit({ type: 'move', movesLeft: this.moves });
     this.checkEnd();
   }
@@ -92,7 +124,7 @@ export class Game {
     if (!this.isFree(i)) { this.emit({ type: 'locked', ring: i }); return 'locked'; }
     const r = this.rings[i];
     r.gone = true;
-    const a = r.g + Math.PI;
+    const a = this.charmAngle(i);
     const slot = Math.min(this.tray.length + this.inFlight, TRAY_SLOTS - 1);
     this.inFlight++;
     this.emit({ type: 'release', ring: i, color: r.c, from: { x: r.x + Math.cos(a) * r.r, y: r.y + Math.sin(a) * r.r }, slot });
@@ -107,6 +139,7 @@ export class Game {
     if (idx.length >= MERGE_COUNT) {
       const slots = idx.slice(0, MERGE_COUNT);
       this.tray = this.tray.filter((_, k) => !slots.includes(k));
+      this.merges++;
       this.emit({ type: 'merge', color, slots });
     }
     this.checkEnd();
@@ -125,7 +158,7 @@ export class Game {
     if (this.moves <= 0) return null;
     let best: Suggestion | null = null, bestScore = -Infinity;
     this.rings.forEach((r, i) => {
-      if (r.gone) return;
+      if (!this.rotatable(i)) return;
       const targets: number[] = [...r.pins];
       this.links.forEach(L => {
         if (L.a !== i && L.b !== i) return;
@@ -135,15 +168,23 @@ export class Game {
       const g0 = r.g;
       for (const a of targets) {
         r.g = a;
-        this.rings.forEach((_, j) => {
-          if (!this.isFree(j)) return;
-          const sc = score(j) - angDiff(a, g0);
-          if (sc > bestScore) { bestScore = sc; best = { type: 'rotate', ring: i, target: a }; }
-        });
+        // best: a rotation that frees a ring; fallback: one that opens the most links/pins (progress)
+        let sc = this.openCount() - 1000;
+        this.rings.forEach((_, j) => { if (this.isFree(j)) sc = Math.max(sc, score(j)); });
+        sc -= angDiff(a, g0);
+        if (sc > bestScore) { bestScore = sc; best = { type: 'rotate', ring: i, target: a }; }
       }
       r.g = g0;
     });
     return best;
+  }
+
+  /** How many links between present rings and pins are currently open (used to rank hint rotations). */
+  private openCount(): number {
+    let n = 0;
+    for (const L of this.links) if (!this.rings[L.a].gone && !this.rings[L.b].gone && this.linkOpen(L)) n++;
+    this.rings.forEach((r, i) => { if (!r.gone) n += r.pins.filter(a => this.inGap(i, a)).length; });
+    return n;
   }
 
   addMoves(n: number): void {
@@ -156,6 +197,9 @@ export class Game {
     if (this.state !== 'play' || this.inFlight > 0) return;
     if (this.rings.every(r => r.gone) && this.tray.length === 0) { this.state = 'won'; this.emit({ type: 'win' }); return; }
     if (this.tray.length >= TRAY_SLOTS) { this.state = 'lost'; this.emit({ type: 'lose', reason: 'tray' }); return; }
-    if (this.moves <= 0 && !this.anyFree()) { this.state = 'lost'; this.emit({ type: 'lose', reason: 'moves' }); }
+    // lost when nothing is free and nothing can change any more (out of moves, or every ring is fixed / out of ice)
+    if (!this.anyFree() && (this.moves <= 0 || !this.rings.some((_, i) => this.rotatable(i)))) {
+      this.state = 'lost'; this.emit({ type: 'lose', reason: 'moves' });
+    }
   }
 }

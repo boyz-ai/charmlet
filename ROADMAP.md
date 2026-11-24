@@ -21,7 +21,7 @@ Add a simple home screen (Play button showing the current level number, settings
 Implement the GDD "First 60 seconds" and "Game feel package": ghost-hand tutorial on levels 1–3 (no text walls), idle hint pulse after 5 s, feedback scaled by event rarity, particles with object pooling, confetti only on level win. Keep everything behind FeedbackManager.
 ```
 
-## M4 — Content: 100 levels (Claude's job + 1 day integration)
+## M4 — Content: 100 levels — DONE by Claude (fixed, twin-gap, lock, ice rings; 100 solver-verified levels with stored solutions; 200 more tests)
 Claude (in chat) extends tools/gen.js with the new mechanics (fixed ring, twin-gap ring, lock ring, ice ring) and generates 100 solver-verified levels on the sawtooth curve. Then in Antigravity:
 ```
 Implement the new mechanics from GDD (fixed ring, twin-gap ring, lock ring, ice ring) in src/core with unit tests, matching tools/gen.js rules exactly, and render them. Load the new levels/levels.json.

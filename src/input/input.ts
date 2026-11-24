@@ -55,7 +55,7 @@ export function attachInput(cv: HTMLCanvasElement, getGame: () => Game, renderer
     drag = null;
     const g = getGame();
     if (moved < TAP_MAX_TURN && performance.now() - t < TAP_MAX_MS) { g.tap(i); return; }
-    g.endDrag(moved);
+    g.endDrag(moved, i);
   };
   cv.addEventListener('pointerup', up);
   cv.addEventListener('pointercancel', () => { drag = null; });

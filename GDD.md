@@ -40,7 +40,7 @@ A tangled bracelet; one swipe rotates a ring, it glows, a tap sends a sparkling 
 - Solver-first pipeline: generator creates candidates → solver computes min moves and solvability (including tray) → levels sorted on a sawtooth curve.
 - Every 10-level arc: 1 new mechanic intro · 2–4 normal · 5 Hard · 6 relief · 7–8 normal · 9 Super Hard · 10 bonus.
 - Move limit = solver minimum + slack (tutorial +4, normal +2–3, hard +1, super hard +0).
-- New mechanic cadence (v1.0, 100 levels): Pin (L3) · Fixed ring, cannot rotate (L11) · Twin-gap ring (L21) · Lock ring, opens after a color merge (L31) · Ice ring, max 2 rotations (L41). Levels 51–100 remix these.
+- New mechanic cadence (v1.0, 100 levels): Pin (L3) · Fixed ring, cannot rotate (L11) · Twin-gap ring, second gap opposite the first (L21) · Lock ring, cannot be released before the first merge in the tray (L31) · Ice ring, max 2 rotations (L41). Levels 51–100 remix these. Every level stores a solver-verified solution (`sol`) that the tests replay through the real game rules.
 
 ## Game feel package
 Spring/ease-out on touch · rotation tick sound every 15° + light haptic · "free" chime when a ring becomes free · release whoosh + medium haptic · merge arpeggio with rising pitch + heavy haptic · confetti only on level win · shake + error haptic on a locked tap · idle hint: a free ring pulses after 5 s. One FeedbackManager triggers all feedback; sound and vibration have separate toggles. Native haptics via Capacitor Haptics.
