@@ -4,7 +4,8 @@ import { angleOf } from '../core/geometry';
 import type { Color } from '../levels/levels';
 
 export const BOARD_W = 360, BOARD_H = 500, SLOT_Y = 462;
-export const slotX = (i: number): number => 60 + i * 60;
+/** x of tray slot i when the tray has n slots (5 → 60…300; 6 with the Extra slot booster). */
+export const slotX = (i: number, n = TRAY_SLOTS): number => 180 + (i - (n - 1) / 2) * (n > TRAY_SLOTS ? 54 : 60);
 
 const COL: Record<Color, { c: string; l: string; s: 'heart' | 'diamond' | 'tri' }> = {
   r: { c: '#ec4a62', l: '#ffb0bb', s: 'heart' },
@@ -23,6 +24,8 @@ export class Renderer {
   private flyers: Flyer[] = [];
   private parts: Particle[] = Array.from({ length: 300 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, l: 0, c: '', on: false, size: 3, grav: 300, rect: false, rot: 0 }));
   private kickT = 0;
+  /** current tray size (follows game.slots) */
+  private trayN = TRAY_SLOTS;
   private kickDir = { x: 0, y: 0 };
   private readonly reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   /** Hint drawn as a ghost hand; null = hidden. */
@@ -56,7 +59,7 @@ export class Renderer {
   reset(): void { this.flyers = []; this.parts.forEach(p => (p.on = false)); this.shakes.clear(); this.hint = null; this.kickT = 0; }
   shake(ring: number): void { this.shakes.set(ring, 1); }
   fly(c: Color, from: { x: number; y: number }, slot: number): void {
-    this.flyers.push({ c, x: from.x, y: from.y, tx: slotX(slot), ty: SLOT_Y, t: 0 });
+    this.flyers.push({ c, x: from.x, y: from.y, tx: slotX(slot, this.trayN), ty: SLOT_Y, t: 0 });
   }
   private emit(n: number, init: (p: Particle, k: number) => void): void {
     let k = 0;
@@ -64,8 +67,12 @@ export class Renderer {
   }
   /** Merge pop in the tray + a small kick of the whole board. */
   burst(slots: number[], c: Color): void {
-    this.emit(slots.length * 14, (p, k) => Object.assign(p, { x: slotX(slots[k % slots.length]), y: SLOT_Y, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 260, c: COL[c].l }));
+    this.emit(slots.length * 14, (p, k) => Object.assign(p, { x: slotX(slots[k % slots.length], this.trayN), y: SLOT_Y, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 260, c: COL[c].l }));
     this.kick(0, 3);
+  }
+  /** Magnet booster: charms fly up out of the tray. */
+  pull(slots: number[], c: Color): void {
+    this.emit(slots.length * 12, (p, k) => Object.assign(p, { x: slotX(slots[k % slots.length], this.trayN), y: SLOT_Y, vx: (Math.random() - 0.5) * 60, vy: -260 - Math.random() * 160, c: COL[c].l, grav: 0 }));
   }
   /** Small gold sparkle where a charm leaves its ring. */
   sparkle(at: { x: number; y: number }): void {
@@ -99,11 +106,12 @@ export class Renderer {
     // tray
     ctx.fillStyle = 'rgba(15,3,12,.45)';
     ctx.beginPath(); ctx.roundRect(18, 428, 324, 68, 22); ctx.fill();
-    for (let i = 0; i < TRAY_SLOTS; i++) {
-      ctx.beginPath(); ctx.arc(slotX(i), SLOT_Y, 19, 0, 7);
+    this.trayN = game.slots;
+    for (let i = 0; i < game.slots; i++) {
+      ctx.beginPath(); ctx.arc(slotX(i, game.slots), SLOT_Y, 19, 0, 7);
       ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(227,196,115,.5)'; ctx.stroke();
     }
-    game.tray.forEach((c, i) => this.bead(slotX(i), SLOT_Y, c, 16));
+    game.tray.forEach((c, i) => this.bead(slotX(i, game.slots), SLOT_Y, c, 16));
 
     const dx = (i: number): number => { const s = this.shakes.get(i) ?? 0; return s > 0 ? Math.sin(s * 60) * 4 * s : 0; };
 

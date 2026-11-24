@@ -51,6 +51,9 @@ Every color also has a symbol (ruby = heart, sapphire = diamond, emerald = trian
 ## Meta (v1.0 — max 2 systems)
 1. Win streak: consecutive first-try wins; at 3+ the next level starts with a bonus (+2 moves); visible on the fail screen ("Your streak will burn!").
 2. Flexible daily reward ("log in 3 of 7 days"), day-7 reward larger than days 1–6 combined.
+   Implemented as a 7-step track: one step per calendar day the game is opened; missed days never reset it. Days 1–6: 20/25/30+Undo/35/40+Magnet/50 coins; day 7: 250 coins + one of each booster.
+- Coins (soft currency): win 10 · hard 15 · super hard 25. +3 moves on the out-of-moves screen costs 60 coins (rewarded ad in M7).
+- Boosters: Undo 60 · Extra slot 90 · Magnet 120 coins after the 2 free uses. Magnet pulls every charm of the most common tray color; a level is won when all rings are out even if the Magnet left a partial color. Extra slot and Magnet can also rescue a full tray from the fail screen.
 
 ## Monetization (IAA + IAP)
 - Rewarded video: +3 moves on fail, 2x coins at level end (optional), extra tray slot for one level.

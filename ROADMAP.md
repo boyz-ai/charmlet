@@ -27,7 +27,7 @@ Claude (in chat) extends tools/gen.js with the new mechanics (fixed ring, twin-g
 Implement the new mechanics from GDD (fixed ring, twin-gap ring, lock ring, ice ring) in src/core with unit tests, matching tools/gen.js rules exactly, and render them. Load the new levels/levels.json.
 ```
 
-## M5 — Meta (1–2 days)
+## M5 — Meta — DONE by Claude (coins, streak +2 bonus, 7-step daily reward, Undo / Extra slot / Magnet with 2 free each)
 ```
 Implement GDD Meta: win streak with +2 moves bonus at 3+, streak warning on the fail screen, and the flexible daily reward (3 of 7 days). Coins as soft currency. Boosters: Undo, Extra slot, Magnet (first 2 free).
 ```

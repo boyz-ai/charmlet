@@ -29,7 +29,17 @@
       <p data-i18n="tagline"></p>
       <button id="playBtn" class="big"></button>
       <p class="small" id="homeStreak"></p>
+      <p class="small"><span class="coin" aria-hidden="true"></span> <b id="homeCoins">0</b> <span data-i18n="coins">Altın</span></p>
+      <button id="dailyBtn" class="ghost" data-i18n="daily">Günlük ödül</button>
       <button id="homeSet" class="ghost" data-i18n="settings">Ayarlar</button>
+    </section>
+
+    <section class="ov sheet" id="daily" role="dialog" aria-modal="true" aria-labelledby="dailyTitle">
+      <h2 id="dailyTitle" data-i18n="daily">Günlük ödül</h2>
+      <p data-i18n="dailyText"></p>
+      <ol class="days" id="days"></ol>
+      <button id="dailyClaim" class="big"></button>
+      <button id="dailyClose" class="ghost" data-i18n="close">Kapat</button>
     </section>
 
     <section class="ov sheet" id="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
@@ -43,7 +53,13 @@
     </section>
   </div>
 
-  <div class="hudrow"><div class="pill"><span data-i18n="moves">Hamle</span> <b id="mv">0</b></div><div class="pill"><span data-i18n="streak">Seri</span> <b id="st">0</b></div></div>
+  <div class="hudrow"><div class="pill"><span data-i18n="moves">Hamle</span> <b id="mv">0</b></div><div class="pill" id="stPill"><span data-i18n="streak">Seri</span> <b id="st">0</b></div><div class="pill"><span class="coin" aria-hidden="true"></span><b id="cn">0</b></div></div>
+  <div class="boosters" role="group" data-i18n-aria="boosters" aria-label="Güçlendiriciler">
+    <button class="bst" id="bUndo" data-b="undo"><span class="bi" aria-hidden="true">↶</span><span data-i18n="b.undo">Geri al</span><em></em></button>
+    <button class="bst" id="bSlot" data-b="slot"><span class="bi" aria-hidden="true">⊕</span><span data-i18n="b.slot">Ekstra yuva</span><em></em></button>
+    <button class="bst" id="bMagnet" data-b="magnet"><span class="bi" aria-hidden="true">🧲</span><span data-i18n="b.magnet">Mıknatıs</span><em></em></button>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <p class="hint" id="hint"></p>
   <p class="note" data-i18n="devNote"></p>
 </div>

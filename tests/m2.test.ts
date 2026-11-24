@@ -20,7 +20,7 @@ describe('save service', () => {
   it('round-trips progress and settings', () => {
     const m = mem(), svc = new LocalSaveService(m);
     svc.save({ ...defaultSave('en'), level: 5, streak: 3, sound: false, vibration: false, seenHome: true });
-    expect(svc.load()).toEqual({ level: 5, streak: 3, sound: false, vibration: false, lang: 'en', seenHome: true });
+    expect(svc.load()).toEqual({ ...defaultSave('en'), level: 5, streak: 3, sound: false, vibration: false, seenHome: true });
   });
   it('survives corrupted data', () => {
     const m = mem(); m.data['charm.save.v1'] = '{oops';

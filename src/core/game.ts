@@ -31,7 +31,10 @@ export type GameEvent =
   | { type: 'becameFree'; ring: number }
   | { type: 'move'; movesLeft: number }
   | { type: 'win' }
-  | { type: 'lose'; reason: 'tray' | 'moves' };
+  | { type: 'lose'; reason: 'tray' | 'moves' }
+  | { type: 'undo'; ring: number }
+  | { type: 'slot'; slots: number }
+  | { type: 'magnet'; color: Color; slots: number[] };
 
 export type GameState = 'play' | 'won' | 'lost';
 
@@ -50,6 +53,12 @@ export class Game {
   /** number of merges so far (opens lock rings) */
   merges = 0;
   state: GameState = 'play';
+  /** tray size for this level (the Extra slot booster raises it to TRAY_SLOTS + 1) */
+  slots = TRAY_SLOTS;
+  /** counted rotations that can be undone (most recent last) */
+  private history: { ring: number; g: number; ice: number | null }[] = [];
+  /** ring and gap angle at the start of the current drag */
+  private dragFrom: { ring: number; g: number; ice: number | null } | null = null;
   private listeners: ((e: GameEvent) => void)[] = [];
 
   constructor(spec: LevelSpec, layout: Layout) {
@@ -103,6 +112,7 @@ export class Game {
   /** Rotate during a drag. Emits becameFree when the ring turns free. */
   rotate(i: number, delta: number): void {
     if (!this.canRotate(i)) return;
+    if (this.dragFrom?.ring !== i) this.dragFrom = { ring: i, g: this.rings[i].g, ice: this.rings[i].ice };
     const was = this.isFree(i);
     this.rings[i].g += delta;
     if (!was && this.isFree(i)) this.emit({ type: 'becameFree', ring: i });
@@ -110,7 +120,10 @@ export class Game {
 
   /** Call when a drag of ring i ends. Counts one move (and one ice charge) if it turned far enough. */
   endDrag(totalTurn: number, i?: number): void {
+    const from = this.dragFrom;
+    this.dragFrom = null;
     if (this.state !== 'play' || totalTurn <= MOVE_THRESHOLD) return;
+    if (from && from.ring === i) this.history.push(from);
     this.moves = Math.max(0, this.moves - 1);
     const r = i === undefined ? undefined : this.rings[i];
     if (r && r.ice !== null) r.ice = Math.max(0, r.ice - 1);
@@ -125,7 +138,7 @@ export class Game {
     const r = this.rings[i];
     r.gone = true;
     const a = this.charmAngle(i);
-    const slot = Math.min(this.tray.length + this.inFlight, TRAY_SLOTS - 1);
+    const slot = Math.min(this.tray.length + this.inFlight, this.slots - 1);
     this.inFlight++;
     this.emit({ type: 'release', ring: i, color: r.c, from: { x: r.x + Math.cos(a) * r.r, y: r.y + Math.sin(a) * r.r }, slot });
     return 'released';
@@ -152,7 +165,7 @@ export class Game {
   suggest(): Suggestion | null {
     if (this.state !== 'play') return null;
     const trayCount = (c: Color): number => this.tray.filter(x => x === c).length;
-    const score = (j: number): number => trayCount(this.rings[j].c) * 10 - (this.tray.length >= TRAY_SLOTS - 1 && trayCount(this.rings[j].c) < MERGE_COUNT - 1 ? 100 : 0);
+    const score = (j: number): number => trayCount(this.rings[j].c) * 10 - (this.tray.length >= this.slots - 1 && trayCount(this.rings[j].c) < MERGE_COUNT - 1 ? 100 : 0);
     const free = this.rings.map((_, i) => i).filter(i => this.isFree(i));
     if (free.length) return { type: 'tap', ring: free.sort((a, b) => score(b) - score(a))[0] };
     if (this.moves <= 0) return null;
@@ -187,19 +200,66 @@ export class Game {
     return n;
   }
 
+  // ---------- boosters ----------
+  /** Why the level was lost (null while playing / won). */
+  loseReason: 'tray' | 'moves' | null = null;
+
+  canUndo(): boolean { return this.state === 'play' && this.history.some(h => !this.rings[h.ring].gone); }
+  /** Undo booster: puts the last counted rotation back and refunds its move (and ice charge). */
+  undo(): boolean {
+    if (!this.canUndo()) return false;
+    while (this.history.length && this.rings[this.history[this.history.length - 1].ring].gone) this.history.pop();
+    const h = this.history.pop()!;
+    const r = this.rings[h.ring];
+    r.g = h.g; r.ice = h.ice;
+    this.moves++;
+    this.emit({ type: 'undo', ring: h.ring });
+    this.emit({ type: 'move', movesLeft: this.moves });
+    return true;
+  }
+
+  canAddSlot(): boolean { return this.slots === TRAY_SLOTS && (this.state === 'play' || this.loseReason === 'tray'); }
+  /** Extra slot booster: a 6th tray slot for this level. Also rescues a full tray. */
+  addSlot(): boolean {
+    if (!this.canAddSlot()) return false;
+    this.slots++;
+    this.emit({ type: 'slot', slots: this.slots });
+    this.revive();
+    return true;
+  }
+
+  canMagnet(): boolean { return this.tray.length > 0 && (this.state === 'play' || this.loseReason === 'tray'); }
+  /** Magnet booster: pulls every charm of the most common tray color out of the tray. */
+  magnet(): boolean {
+    if (!this.canMagnet()) return false;
+    const count = (c: Color): number => this.tray.filter(x => x === c).length;
+    const color = [...this.tray].sort((a, b) => count(b) - count(a))[0];
+    const slots = this.tray.map((c, k) => (c === color ? k : -1)).filter(k => k >= 0);
+    this.tray = this.tray.filter(c => c !== color);
+    this.emit({ type: 'magnet', color, slots });
+    this.revive();
+    return true;
+  }
+
+  /** Back to play after a tray rescue. */
+  private revive(): void {
+    if (this.state === 'lost' && this.loseReason === 'tray') { this.state = 'play'; this.loseReason = null; this.checkEnd(); }
+  }
+
   addMoves(n: number): void {
     this.moves += n;
-    if (this.state === 'lost') this.state = 'play';
+    if (this.state === 'lost' && this.loseReason === 'moves') { this.state = 'play'; this.loseReason = null; }
     this.emit({ type: 'move', movesLeft: this.moves });
   }
 
   checkEnd(): void {
     if (this.state !== 'play' || this.inFlight > 0) return;
-    if (this.rings.every(r => r.gone) && this.tray.length === 0) { this.state = 'won'; this.emit({ type: 'win' }); return; }
-    if (this.tray.length >= TRAY_SLOTS) { this.state = 'lost'; this.emit({ type: 'lose', reason: 'tray' }); return; }
+    // all rings out = win (charms a Magnet pulled can leave a partial color behind, so the tray need not be empty)
+    if (this.rings.every(r => r.gone)) { this.tray = []; this.state = 'won'; this.emit({ type: 'win' }); return; }
+    if (this.tray.length >= this.slots) { this.state = 'lost'; this.loseReason = 'tray'; this.emit({ type: 'lose', reason: 'tray' }); return; }
     // lost when nothing is free and nothing can change any more (out of moves, or every ring is fixed / out of ice)
     if (!this.anyFree() && (this.moves <= 0 || !this.rings.some((_, i) => this.rotatable(i)))) {
-      this.state = 'lost'; this.emit({ type: 'lose', reason: 'moves' });
+      this.state = 'lost'; this.loseReason = 'moves'; this.emit({ type: 'lose', reason: 'moves' });
     }
   }
 }
