@@ -27,19 +27,3 @@ export interface LevelSpec {
 }
 
 export const LEVELS = raw as unknown as LevelSpec[];
-
-export const ROLE_NAMES_TR: Record<string, string> = {
-  'Öğretici': 'Öğretici', 'Öğretici: tepsi': 'Öğretici', 'Yeni: pim': 'Yeni mekanik', 'Normal': 'Normal',
-  'Zor': 'Zor', 'Dinlenme': 'Rahat', 'Normal+': 'Normal', 'Süper zor': 'Süper zor',
-};
-
-export const HINTS_TR: Record<string, string> = {
-  'Öğretici': 'Bir halkayı parmağınla çevir. Boşluğunu komşu halkayla kesiştiği noktaya getir. Parlayan halka serbesttir: ona dokun.',
-  'Öğretici: tepsi': 'Aynı renkten 3 charm tepside birleşir. 5 yuva dolarsa kaybedersin. Her çevirme 1 hamle; dokunmak bedava.',
-  'Yeni: pim': 'Yeni: altın pim! Pimli halka, boşluğu pimin üstüne gelmeden çıkmaz.',
-  'Normal': 'Hamlelerini say: önce hangi halkayı çevirirsen diğerlerinin de yolu açılır?',
-  'Zor': 'Zor seviye! Üç renk var; tepsiyi dolduracak sırayla çıkarma.',
-  'Dinlenme': 'Nefes al: rahat bir bileklik.',
-  'Normal+': 'Halka kolye: ortadaki halka herkese bağlı.',
-  'Süper zor': 'Süper zor! Hamle payı yok: her çevirme doğru olmalı.',
-};

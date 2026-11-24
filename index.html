@@ -11,16 +11,41 @@
 <body>
 <div class="wrap">
   <header>
-    <div><h1>Charm Çözücü</h1><div class="lv" id="lv">Seviye 1</div></div>
-    <button id="rs" aria-label="Seviyeyi baştan başlat">Baştan</button>
+    <div><h1 data-i18n="title">Charm Çözücü</h1><div class="lv" id="lv"></div></div>
+    <div class="hbtns">
+      <button id="homeBtn" class="icon" data-i18n-aria="home" aria-label="Ana sayfa">⌂</button>
+      <button id="setBtn" class="icon" data-i18n-aria="settings" aria-label="Ayarlar">⚙</button>
+      <button id="rs" data-i18n="restart">Baştan</button>
+    </div>
   </header>
+
   <div class="box">
-    <canvas id="c" aria-label="Oyun alanı: halkaları çevir ve serbest kalanlara dokun"></canvas>
+    <canvas id="c" aria-label="Board"></canvas>
     <div class="ov" id="ov"><h2 id="ot"></h2><p id="op"></p><button id="ob"></button><button id="ob2" class="ghost"></button></div>
+
+    <section class="ov home" id="home">
+      <div class="logo" aria-hidden="true"><span></span><span></span><span></span></div>
+      <h2 data-i18n="title">Charm Çözücü</h2>
+      <p data-i18n="tagline"></p>
+      <button id="playBtn" class="big"></button>
+      <p class="small" id="homeStreak"></p>
+      <button id="homeSet" class="ghost" data-i18n="settings">Ayarlar</button>
+    </section>
+
+    <section class="ov sheet" id="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+      <h2 id="setTitle" data-i18n="settings">Ayarlar</h2>
+      <label class="row"><span data-i18n="sound">Ses</span><input type="checkbox" id="optSound"></label>
+      <label class="row"><span data-i18n="vibration">Titreşim</span><input type="checkbox" id="optVib"></label>
+      <div class="row"><span data-i18n="language">Dil</span>
+        <div class="seg"><button id="langTr" type="button">TR</button><button id="langEn" type="button">EN</button></div>
+      </div>
+      <button id="setClose" data-i18n="close">Kapat</button>
+    </section>
   </div>
-  <div class="hudrow"><div class="pill">Hamle <b id="mv">0</b></div><div class="pill">Seri <b id="st">0</b></div></div>
+
+  <div class="hudrow"><div class="pill"><span data-i18n="moves">Hamle</span> <b id="mv">0</b></div><div class="pill"><span data-i18n="streak">Seri</span> <b id="st">0</b></div></div>
   <p class="hint" id="hint"></p>
-  <p class="note">Geliştirme sürümü (M1). Sesi açmak için tahtaya bir kez dokun.</p>
+  <p class="note" data-i18n="devNote"></p>
 </div>
 <script type="module" src="/src/main.ts"></script>
 </body>

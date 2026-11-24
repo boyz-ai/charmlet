@@ -23,3 +23,18 @@ canvas{display:block;width:100%;aspect-ratio:360/500;border-radius:18px;touch-ac
 .hudrow{display:flex;gap:10px;margin-top:12px}.pill{flex:1;text-align:center;border:2px solid var(--gold);border-radius:22px;padding:6px 10px;font-size:15px}.pill b{font-size:20px;margin-left:6px}
 .note{font-size:13px;color:var(--muted);margin-top:8px}
 @media (prefers-reduced-motion:reduce){canvas{transition:none}}
+.hbtns{display:flex;gap:8px;align-items:center}
+button.icon{width:44px;padding:0;font-size:20px;line-height:1}
+.ov.home{background:radial-gradient(circle at 50% 35%,#6e2b5e,#33102c 78%)}
+.ov .big{min-height:56px;font-size:22px;padding:0 34px;border-radius:28px}
+.ov .small{font-size:15px;min-height:22px}
+.logo{position:relative;width:132px;height:70px;margin-bottom:6px}
+.logo span{position:absolute;top:0;width:66px;height:66px;border-radius:50%;border:9px solid #ec4a62;border-right-color:transparent}
+.logo span:nth-child(1){left:0}.logo span:nth-child(2){left:33px;border-color:#3f82e6;border-left-color:transparent}.logo span:nth-child(3){left:66px;border-color:#25b47c;border-top-color:transparent}
+.ov.sheet{justify-content:flex-start;padding-top:36px;gap:14px}
+.row{display:flex;align-items:center;justify-content:space-between;width:min(100%,300px);min-height:48px;font-size:18px;border-bottom:1px solid rgba(255,255,255,.15)}
+.row input{width:26px;height:26px;accent-color:#e3c473}
+.seg{display:flex;gap:6px}.seg button{min-width:54px;padding:0 10px;color:#fff;border-color:rgba(255,255,255,.4);background:transparent}
+.seg button[aria-pressed=true]{background:#e3c473;color:#2a1426;border-color:#e3c473}
+.ov.sheet{background:#2a0d24}
+h1{font-size:clamp(20px,6vw,26px);white-space:nowrap}

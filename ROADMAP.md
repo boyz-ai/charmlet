@@ -11,7 +11,7 @@ Behaviour and look must match the prototype exactly. Add Vitest unit tests for s
 ```
 Check: the game plays the same as the prototype on your phone.
 
-## M2 — Screens & save (1–2 days)
+## M2 — Screens & save — DONE by Claude (home screen, settings, EN/TR, local save, 7 more tests)
 ```
 Add a simple home screen (Play button showing the current level number, settings icon), a settings panel (sound on/off, vibration on/off, language EN/TR), level-complete and fail screens as in the prototype, and local save of current level, streak and settings (behind a SaveService interface). No menus before level 1 on first launch: the first launch goes straight into level 1.
 ```
