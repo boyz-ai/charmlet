@@ -17,6 +17,10 @@ const persist = (): void => store.save(save);
 
 let level = Math.min(save.level, LEVELS.length - 1);
 let failedOnce = false;
+/** seconds since the player last touched the board (drives the ghost-hand hint) */
+let idle = 0;
+const TUTORIAL_LEVELS = 3, TUTORIAL_HINT_DELAY = 0.8, HINT_DELAY = 5;
+const resetIdle = (): void => { idle = 0; renderer.hint = null; };
 let game!: Game;
 
 // ---------- language & static texts ----------
@@ -49,17 +53,18 @@ function load(n: number, keepFail = false): void {
   renderer.reset();
   game.on(e => {
     switch (e.type) {
-      case 'release': fb.release(); renderer.fly(e.color, e.from, e.slot); break;
+      case 'release': fb.release(); renderer.fly(e.color, e.from, e.slot); renderer.sparkle(e.from); resetIdle(); break;
       case 'merge': fb.merge(); renderer.burst(e.slots, e.color); break;
       case 'locked': fb.locked(); renderer.shake(e.ring); break;
       case 'becameFree': fb.becameFree(); break;
-      case 'move': hud(); break;
+      case 'move': hud(); resetIdle(); break;
       case 'win': onWin(); break;
       case 'lose': onLose(e.reason); break;
     }
   });
   levelTexts();
   hideOverlay();
+  resetIdle();
   hud();
 }
 
@@ -67,6 +72,7 @@ function hud(): void { $('mv').textContent = String(game.moves); $('st').textCon
 
 function onWin(): void {
   fb.win();
+  renderer.confetti();
   if (!failedOnce) save.streak++;
   const last = level === LEVELS.length - 1;
   save.level = last ? 0 : level + 1;
@@ -124,7 +130,7 @@ $('langEn').addEventListener('click', () => setLanguage('en'));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
 
 renderer.onLand = c => game.charmLanded(c);
-attachInput(cv, () => game, renderer, fb);
+attachInput(cv, () => game, renderer, fb, resetIdle);
 
 fb.sound = save.sound;
 fb.vibration = save.vibration;
@@ -140,6 +146,12 @@ const t0 = last;
 function frame(now: number): void {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
+  const blocked = ['ov', 'home', 'settings'].some(id => $(id).classList.contains('on'));
+  if (game.state === 'play' && !blocked) {
+    idle += dt;
+    const delay = level < TUTORIAL_LEVELS ? TUTORIAL_HINT_DELAY : HINT_DELAY;
+    if (idle >= delay && !renderer.hint) renderer.hint = game.suggest();
+  } else if (renderer.hint) resetIdle();
   renderer.update(dt);
   renderer.draw(game, (now - t0) / 1000, game.state === 'play');
   requestAnimationFrame(frame);

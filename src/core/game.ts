@@ -18,6 +18,10 @@ export type GameEvent =
 
 export type GameState = 'play' | 'won' | 'lost';
 
+export type Suggestion =
+  | { type: 'tap'; ring: number }
+  | { type: 'rotate'; ring: number; target: number };
+
 /** Pure game rules. No DOM, no canvas. */
 export class Game {
   rings: Ring[];
@@ -106,6 +110,40 @@ export class Game {
       this.emit({ type: 'merge', color, slots });
     }
     this.checkEnd();
+  }
+
+  /**
+   * Hint for the player: tap a free ring (preferring colors already in the tray),
+   * otherwise one rotation (ring + target gap angle) that frees a ring.
+   */
+  suggest(): Suggestion | null {
+    if (this.state !== 'play') return null;
+    const trayCount = (c: Color): number => this.tray.filter(x => x === c).length;
+    const score = (j: number): number => trayCount(this.rings[j].c) * 10 - (this.tray.length >= TRAY_SLOTS - 1 && trayCount(this.rings[j].c) < MERGE_COUNT - 1 ? 100 : 0);
+    const free = this.rings.map((_, i) => i).filter(i => this.isFree(i));
+    if (free.length) return { type: 'tap', ring: free.sort((a, b) => score(b) - score(a))[0] };
+    if (this.moves <= 0) return null;
+    let best: Suggestion | null = null, bestScore = -Infinity;
+    this.rings.forEach((r, i) => {
+      if (r.gone) return;
+      const targets: number[] = [...r.pins];
+      this.links.forEach(L => {
+        if (L.a !== i && L.b !== i) return;
+        const o = L.a === i ? L.b : L.a;
+        if (!this.rings[o].gone) L.p.forEach(p => targets.push(angleOf(r, p)));
+      });
+      const g0 = r.g;
+      for (const a of targets) {
+        r.g = a;
+        this.rings.forEach((_, j) => {
+          if (!this.isFree(j)) return;
+          const sc = score(j) - angDiff(a, g0);
+          if (sc > bestScore) { bestScore = sc; best = { type: 'rotate', ring: i, target: a }; }
+        });
+      }
+      r.g = g0;
+    });
+    return best;
   }
 
   addMoves(n: number): void {

@@ -1,4 +1,4 @@
-import type { Game, Ring } from '../core/game';
+import type { Game, Ring, Suggestion } from '../core/game';
 import { TRAY_SLOTS } from '../core/game';
 import { angleOf } from '../core/geometry';
 import type { Color } from '../levels/levels';
@@ -13,7 +13,7 @@ const COL: Record<Color, { c: string; l: string; s: 'heart' | 'diamond' | 'tri' 
 };
 
 interface Flyer { c: Color; x: number; y: number; tx: number; ty: number; t: number }
-interface Particle { x: number; y: number; vx: number; vy: number; l: number; c: string; on: boolean }
+interface Particle { x: number; y: number; vx: number; vy: number; l: number; c: string; on: boolean; size: number; grav: number; rect: boolean; rot: number }
 
 /** Canvas drawing + purely visual animations (flyers, particles, shakes). */
 export class Renderer {
@@ -21,7 +21,13 @@ export class Renderer {
   private scale = 1;
   private dpr = 1;
   private flyers: Flyer[] = [];
-  private parts: Particle[] = Array.from({ length: 160 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, l: 0, c: '', on: false }));
+  private parts: Particle[] = Array.from({ length: 300 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, l: 0, c: '', on: false, size: 3, grav: 300, rect: false, rot: 0 }));
+  private kickT = 0;
+  private kickDir = { x: 0, y: 0 };
+  private readonly reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /** Hint drawn as a ghost hand; null = hidden. */
+  hint: Suggestion | null = null;
+  private hintT = 0;
   private shakes = new Map<number, number>();
   private readonly ro: ResizeObserver;
   onLand: (c: Color) => void = () => {};
@@ -47,35 +53,48 @@ export class Renderer {
     return { x: ((e.clientX - r.left) / r.width) * BOARD_W, y: ((e.clientY - r.top) / r.width) * BOARD_W };
   }
 
-  reset(): void { this.flyers = []; this.parts.forEach(p => (p.on = false)); this.shakes.clear(); }
+  reset(): void { this.flyers = []; this.parts.forEach(p => (p.on = false)); this.shakes.clear(); this.hint = null; this.kickT = 0; }
   shake(ring: number): void { this.shakes.set(ring, 1); }
   fly(c: Color, from: { x: number; y: number }, slot: number): void {
     this.flyers.push({ c, x: from.x, y: from.y, tx: slotX(slot), ty: SLOT_Y, t: 0 });
   }
-  burst(slots: number[], c: Color): void {
-    let need = slots.length * 14;
-    for (const p of this.parts) {
-      if (need <= 0) break;
-      if (p.on) continue;
-      const s = slots[need % slots.length];
-      Object.assign(p, { x: slotX(s), y: SLOT_Y, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 260, l: 1, c: COL[c].l, on: true });
-      need--;
-    }
+  private emit(n: number, init: (p: Particle, k: number) => void): void {
+    let k = 0;
+    for (const p of this.parts) { if (k >= n) break; if (p.on) continue; p.on = true; p.l = 1; p.size = 3; p.grav = 300; p.rect = false; p.rot = 0; init(p, k++); }
   }
+  /** Merge pop in the tray + a small kick of the whole board. */
+  burst(slots: number[], c: Color): void {
+    this.emit(slots.length * 14, (p, k) => Object.assign(p, { x: slotX(slots[k % slots.length]), y: SLOT_Y, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 260, c: COL[c].l }));
+    this.kick(0, 3);
+  }
+  /** Small gold sparkle where a charm leaves its ring. */
+  sparkle(at: { x: number; y: number }): void {
+    this.emit(8, p => Object.assign(p, { x: at.x, y: at.y, vx: (Math.random() - 0.5) * 140, vy: (Math.random() - 0.5) * 140, c: '#ffe08a', grav: 0, size: 2 }));
+  }
+  /** Confetti only for a level win. */
+  confetti(): void {
+    const cols = ['#ec4a62', '#3f82e6', '#25b47c', '#e3c473', '#ffffff'];
+    this.emit(this.reduceMotion ? 30 : 120, (p, k) => Object.assign(p, { x: Math.random() * BOARD_W, y: -10 - Math.random() * 60, vx: (Math.random() - 0.5) * 60, vy: 60 + Math.random() * 120, c: cols[k % cols.length], grav: 40, size: 4, rect: true, rot: Math.random() * 6, l: 2.2 }));
+  }
+  kick(x: number, y: number): void { if (this.reduceMotion) return; this.kickT = 0.12; this.kickDir = { x, y }; }
 
   update(dt: number): void {
     this.shakes.forEach((v, k) => (v - dt * 2.5 <= 0 ? this.shakes.delete(k) : this.shakes.set(k, v - dt * 2.5)));
     for (const f of this.flyers) f.t += dt / 0.45;
     const landed = this.flyers.filter(f => f.t >= 1);
     this.flyers = this.flyers.filter(f => f.t < 1);
-    for (const p of this.parts) if (p.on) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 300 * dt; p.l -= dt * 1.4; if (p.l <= 0) p.on = false; }
+    for (const p of this.parts) if (p.on) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.grav * dt; p.rot += dt * 6; p.l -= dt * 1.4; if (p.l <= 0) p.on = false; }
+    this.kickT = Math.max(0, this.kickT - dt);
+    this.hintT = this.hint ? this.hintT + dt : 0;
     landed.forEach(f => this.onLand(f.c));
   }
 
   draw(game: Game, time: number, glowFree: boolean): void {
     const ctx = this.ctx;
-    ctx.setTransform(this.dpr * this.scale, 0, 0, this.dpr * this.scale, 0, 0);
+    const k = this.scale * this.dpr;
+    ctx.setTransform(k, 0, 0, k, 0, 0);
     ctx.clearRect(0, 0, BOARD_W, BOARD_H);
+    if (this.kickT > 0) { const f = this.kickT / 0.12; ctx.translate(this.kickDir.x * f, this.kickDir.y * f); }
 
     // tray
     ctx.fillStyle = 'rgba(15,3,12,.45)';
@@ -128,10 +147,41 @@ export class Renderer {
       this.bead(f.x + (f.tx - f.x) * e, f.y + (f.ty - f.y) * e - Math.sin(e * Math.PI) * 40, f.c, 11 + 5 * e);
     }
     for (const p of this.parts) if (p.on) {
-      ctx.globalAlpha = Math.max(p.l, 0); ctx.fillStyle = p.c;
-      ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, 7); ctx.fill();
+      ctx.globalAlpha = Math.min(1, Math.max(p.l, 0)); ctx.fillStyle = p.c;
+      if (p.rect) { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.size, -p.size / 2, p.size * 2, p.size); ctx.restore(); }
+      else { ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill(); }
     }
     ctx.globalAlpha = 1;
+    if (this.hint) this.drawHint(game, this.hint);
+  }
+
+  /** Ghost hand: drags a ring's charm to the target angle, or taps a free ring. Loops. */
+  private drawHint(game: Game, h: Suggestion): void {
+    const r = game.rings[h.ring];
+    if (!r || r.gone) return;
+    const ctx = this.ctx, T = 1.8, t = (this.hintT % T) / T;
+    const fade = Math.min(1, this.hintT * 3) * (t < 0.85 ? 1 : (1 - t) / 0.15);
+    let x: number, y: number, press: boolean;
+    if (h.type === 'rotate') {
+      const d = Math.atan2(Math.sin(h.target - r.g), Math.cos(h.target - r.g));
+      const start = r.g + Math.PI, e = t < 0.15 ? 0 : t > 0.75 ? 1 : (t - 0.15) / 0.6;
+      const ease = e * e * (3 - 2 * e), a = start + d * ease;
+      // path guide
+      ctx.save(); ctx.globalAlpha = 0.35 * fade; ctx.setLineDash([4, 6]); ctx.lineWidth = 3; ctx.strokeStyle = '#fff';
+      ctx.beginPath(); ctx.arc(r.x, r.y, r.r + 18, Math.min(start, start + d), Math.max(start, start + d)); ctx.stroke(); ctx.restore();
+      x = r.x + Math.cos(a) * r.r; y = r.y + Math.sin(a) * r.r; press = t > 0.1 && t < 0.8;
+    } else {
+      const a = r.g + Math.PI;
+      x = r.x + Math.cos(a) * r.r; y = r.y + Math.sin(a) * r.r; press = t > 0.3 && t < 0.5;
+      if (press) { ctx.save(); ctx.globalAlpha = 0.5 * fade; ctx.strokeStyle = '#ffe08a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 18 + (t - 0.3) * 60, 0, 7); ctx.stroke(); ctx.restore(); }
+    }
+    // hand: fingertip circle + palm
+    ctx.save(); ctx.globalAlpha = 0.9 * fade; ctx.translate(x + 6, y + 10 + (press ? 0 : 6));
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(3, 4, 13, 17, 0.3, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#2a0d22'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-6, -14, 12, 26, 6); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(4, 14, 12, 14, 0.2, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.restore();
   }
 
   private arc(r: Ring, a0: number, a1: number, w: number, color: string, rad = r.r): void {

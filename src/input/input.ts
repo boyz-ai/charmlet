@@ -6,7 +6,7 @@ import type { FeedbackManager } from '../feedback/feedback';
 const TAP_MAX_TURN = 0.08, TAP_MAX_MS = 350, TICK_EVERY = 0.26;
 
 /** Pointer handling: drag a ring to rotate it, tap a ring to release it. */
-export function attachInput(cv: HTMLCanvasElement, getGame: () => Game, renderer: Renderer, fb: FeedbackManager): void {
+export function attachInput(cv: HTMLCanvasElement, getGame: () => Game, renderer: Renderer, fb: FeedbackManager, onInteract: () => void = () => {}): void {
   let drag: { i: number; a: number; moved: number; acc: number; t: number } | null = null;
 
   const pick = (p: { x: number; y: number }): number => {
@@ -27,6 +27,7 @@ export function attachInput(cv: HTMLCanvasElement, getGame: () => Game, renderer
 
   cv.addEventListener('pointerdown', e => {
     fb.unlock();
+    onInteract();
     const g = getGame();
     if (g.state !== 'play') return;
     const p = renderer.toBoard(e), i = pick(p);
@@ -38,6 +39,7 @@ export function attachInput(cv: HTMLCanvasElement, getGame: () => Game, renderer
 
   cv.addEventListener('pointermove', e => {
     if (!drag) return;
+    onInteract();
     const g = getGame(), p = renderer.toBoard(e), r = g.rings[drag.i];
     const a = Math.atan2(p.y - r.y, p.x - r.x), d = angDelta(drag.a, a);
     drag.a = a;

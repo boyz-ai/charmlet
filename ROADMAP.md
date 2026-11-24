@@ -16,7 +16,7 @@ Check: the game plays the same as the prototype on your phone.
 Add a simple home screen (Play button showing the current level number, settings icon), a settings panel (sound on/off, vibration on/off, language EN/TR), level-complete and fail screens as in the prototype, and local save of current level, streak and settings (behind a SaveService interface). No menus before level 1 on first launch: the first launch goes straight into level 1.
 ```
 
-## M3 — FTUE + game feel (2–3 days)
+## M3 — FTUE + game feel — DONE by Claude (ghost-hand hints, idle hint after 5 s, sparkle/merge kick/confetti, 10 more tests)
 ```
 Implement the GDD "First 60 seconds" and "Game feel package": ghost-hand tutorial on levels 1–3 (no text walls), idle hint pulse after 5 s, feedback scaled by event rarity, particles with object pooling, confetti only on level win. Keep everything behind FeedbackManager.
 ```
