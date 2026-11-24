@@ -1,0 +1,25 @@
+/* VOICE: oyuncu, sıcak, mücevher kutusu
+   IDEA: kadife kaplı mücevher tepsisi
+   PICTURE: oyun tahtasının kendisi
+   COLOUR: mürdüm kadife, altın çerçeve, değerli taş renkleri
+   TYPE: Fredoka · LAYOUT: başlık, tahta, ipucu */
+:root{color-scheme:light dark;--bg:light-dark(#f4ece4,#160d14);--ink:light-dark(#2a1426,#f3e6ee);--muted:light-dark(#6d5266,#bfa7b7);--gold:#c9a24a}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Fredoka,system-ui,sans-serif;overflow-x:clip;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:480px;margin:0 auto;padding:16px 14px 28px}
+header{display:flex;align-items:center;gap:10px;justify-content:space-between}
+h1{font-size:26px;line-height:1.1;margin:0;font-weight:600}
+.lv{color:var(--muted);font-size:15px}
+button{font:inherit;font-weight:500;min-height:44px;padding:0 18px;border-radius:22px;border:2px solid var(--gold);background:transparent;color:var(--ink);cursor:pointer}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.box{position:relative;margin-top:12px;border-radius:26px;padding:10px;background:linear-gradient(145deg,#e3c473,#8a6a24);box-shadow:0 14px 30px rgba(40,10,30,.35)}
+canvas{display:block;width:100%;aspect-ratio:360/500;border-radius:18px;touch-action:none;background:radial-gradient(circle at 50% 35%,#6e2b5e,#33102c 72%)}
+.hint{margin:12px 2px 0;font-size:16px;min-height:48px}
+.ov{position:absolute;inset:10px;border-radius:18px;background:rgba(30,8,26,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;text-align:center;padding:24px}
+.ov.on{display:flex}.ov h2{margin:0;font-size:32px;line-height:1.1}.ov p{margin:0;max-width:26ch;color:#f1dcea}
+.ov button{color:#2a1426;background:#e3c473;border-color:#e3c473}
+.ov .ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.hudrow{display:flex;gap:10px;margin-top:12px}.pill{flex:1;text-align:center;border:2px solid var(--gold);border-radius:22px;padding:6px 10px;font-size:15px}.pill b{font-size:20px;margin-left:6px}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+@media (prefers-reduced-motion:reduce){canvas{transition:none}}

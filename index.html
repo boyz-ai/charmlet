@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Charm Unlock</title>
+<link rel="icon" href="./favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Charm Çözücü</h1><div class="lv" id="lv">Seviye 1</div></div>
+    <button id="rs" aria-label="Seviyeyi baştan başlat">Baştan</button>
+  </header>
+  <div class="box">
+    <canvas id="c" aria-label="Oyun alanı: halkaları çevir ve serbest kalanlara dokun"></canvas>
+    <div class="ov" id="ov"><h2 id="ot"></h2><p id="op"></p><button id="ob"></button><button id="ob2" class="ghost"></button></div>
+  </div>
+  <div class="hudrow"><div class="pill">Hamle <b id="mv">0</b></div><div class="pill">Seri <b id="st">0</b></div></div>
+  <p class="hint" id="hint"></p>
+  <p class="note">Geliştirme sürümü (M1). Sesi açmak için tahtaya bir kez dokun.</p>
+</div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

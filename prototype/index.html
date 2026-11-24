@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Charm Çözücü Prototip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: oyuncu, sıcak, mücevher kutusu
+   IDEA: kadife kaplı mücevher tepsisi
+   PICTURE: oyun tahtasının kendisi
+   COLOUR: mürdüm kadife, altın çerçeve, değerli taş renkleri
+   TYPE: Fredoka · LAYOUT: başlık, tahta, ipucu */
+:root{color-scheme:light dark;--bg:light-dark(#f4ece4,#160d14);--ink:light-dark(#2a1426,#f3e6ee);--muted:light-dark(#6d5266,#bfa7b7);--gold:#c9a24a}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Fredoka,system-ui,sans-serif;overflow-x:clip;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:480px;margin:0 auto;padding:16px 14px 28px}
+header{display:flex;align-items:center;gap:10px;justify-content:space-between}
+h1{font-size:26px;line-height:1.1;margin:0;font-weight:600}
+.lv{color:var(--muted);font-size:15px}
+button{font:inherit;font-weight:500;min-height:44px;padding:0 18px;border-radius:22px;border:2px solid var(--gold);background:transparent;color:var(--ink);cursor:pointer}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.box{position:relative;margin-top:12px;border-radius:26px;padding:10px;background:linear-gradient(145deg,#e3c473,#8a6a24);box-shadow:0 14px 30px rgba(40,10,30,.35)}
+canvas{display:block;width:100%;aspect-ratio:360/500;border-radius:18px;touch-action:none;background:radial-gradient(circle at 50% 35%,#6e2b5e,#33102c 72%)}
+.hint{margin:12px 2px 0;font-size:16px;min-height:48px}
+.ov{position:absolute;inset:10px;border-radius:18px;background:rgba(30,8,26,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#fff;text-align:center;padding:24px}
+.ov.on{display:flex}.ov h2{margin:0;font-size:32px;line-height:1.1}.ov p{margin:0;max-width:26ch;color:#f1dcea}
+.ov button{color:#2a1426;background:#e3c473;border-color:#e3c473}
+.ov .ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.hudrow{display:flex;gap:10px;margin-top:12px}.pill{flex:1;text-align:center;border:2px solid var(--gold);border-radius:22px;padding:6px 10px;font-size:15px}.pill b{font-size:20px;margin-left:6px}
+.note{font-size:13px;color:var(--muted);margin-top:8px}
+@media (prefers-reduced-motion:reduce){canvas{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>Charm Çözücü</h1><div class="lv" id="lv">Seviye 1</div></div>
+    <button id="rs" aria-label="Seviyeyi baştan başlat">Baştan</button>
+  </header>
+  <div class="box">
+    <canvas id="c" aria-label="Oyun alanı: halkaları çevir ve serbest kalanlara dokun"></canvas>
+    <div class="ov" id="ov"><h2 id="ot"></h2><p id="op"></p><button id="ob"></button><button id="ob2" class="ghost"></button></div>
+  </div>
+  <div class="hudrow"><div class="pill">Hamle <b id="mv">0</b></div><div class="pill">Seri <b id="st">0</b></div></div>
+  <p class="hint" id="hint"></p>
+  <p class="note">Prototip v0.2: 8 seviye, hepsi çözücüyle doğrulandı. "+3 hamle" ileride reklam/altın karşılığı olacak. Sesi açmak için tahtaya bir kez dokun.</p>
+</div>
+<script>
+{
+const W=360,H=500,GAP=28*Math.PI/180,SLOTS=5,SLOT_Y=462;
+const COL={r:{c:'#ec4a62',l:'#ffb0bb',s:'heart'},b:{c:'#3f82e6',l:'#a8cbff',s:'diamond'},g:{c:'#25b47c',l:'#9af2cd',s:'tri'}};
+const LAYOUTS={row3:{r:60,pts:[[110,210],[180,210],[250,210]]},g23:{r:58,pts:[[95,170],[180,170],[265,170],[95,270],[180,270],[265,270]]},zig6:{r:56,pts:[[80,150],[150,200],[220,150],[290,200],[150,290],[220,290]]},g33:{r:54,pts:[[100,120],[180,120],[260,120],[100,210],[180,210],[260,210],[100,300],[180,300],[260,300]]},ring9:{r:52,pts:[[180,100],[255,135],[285,210],[255,285],[180,320],[105,285],[75,210],[105,135],[180,210]]}};
+const LEVELS=[{"l": "row3", "c": "rrr", "g": [150, 15, 90], "p": [], "m": 6, "role": "Öğretici", "h": "Bir halkayı parmağınla çevir. Boşluğunu komşu halkayla kesiştiği noktaya getir. Parlayan halka serbesttir: ona dokun."}, {"l": "g23", "c": "bbrrrb", "g": [240, 285, 270, 345, 210, 300], "p": [], "m": 7, "role": "Öğretici: tepsi", "h": "Aynı renkten 3 charm tepside birleşir. 5 yuva dolarsa kaybedersin. Her çevirme 1 hamle; dokunmak bedava."}, {"l": "g23", "c": "brbbrr", "g": [285, 270, 105, 165, 165, 45], "p": [[2, 30]], "m": 7, "role": "Yeni: pim", "h": "Yeni: altın pim! Pimli halka, boşluğu pimin üstüne gelmeden çıkmaz."}, {"l": "zig6", "c": "bbrrbr", "g": [45, 60, 345, 135, 150, 15], "p": [[0, 270]], "m": 6, "role": "Normal", "h": "Hamlelerini say: önce hangi halkayı çevirirsen diğerlerinin de yolu açılır?"}, {"l": "g33", "c": "brgggrbrb", "g": [225, 90, 45, 30, 210, 195, 225, 30, 90], "p": [[4, 315]], "m": 6, "role": "Zor", "h": "Zor seviye! Üç renk var; tepsiyi dolduracak sırayla çıkarma."}, {"l": "zig6", "c": "bbrrbr", "g": [45, 75, 240, 285, 225, 75], "p": [], "m": 8, "role": "Dinlenme", "h": "Nefes al: rahat bir bileklik."}, {"l": "ring9", "c": "rgbbrggbr", "g": [180, 330, 285, 60, 15, 75, 315, 270, 120], "p": [[5, 225], [6, 180]], "m": 6, "role": "Normal+", "h": "Halka kolye: ortadaki halka herkese bağlı."}, {"l": "g33", "c": "grggbbbrr", "g": [285, 30, 225, 270, 45, 195, 150, 300, 210], "p": [[7, 300], [0, 345], [2, 270]], "m": 5, "role": "Süper zor", "h": "Süper zor! Hamle payı yok: her çevirme doğru olmalı."}];
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+let lvl=0,moves=0,streak=0,failedOnce=false,rings=[],links=[],tray=[],flyers=[],parts=[],drag=null,over=false,scale=1,dpr=1,t0=performance.now();
+
+function inter(a,b){const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+  if(d>=a.r+b.r||d<=Math.abs(a.r-b.r))return null;
+  const l=(a.r*a.r-b.r*b.r+d*d)/(2*d),h=Math.sqrt(a.r*a.r-l*l),mx=a.x+dx*l/d,my=a.y+dy*l/d;
+  return [{x:mx+h*dy/d,y:my-h*dx/d},{x:mx-h*dy/d,y:my+h*dx/d}];}
+const ad=(a,b)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)));
+const angOf=(r,p)=>Math.atan2(p.y-r.y,p.x-r.x);
+const covers=(r,p)=>ad(angOf(r,p),r.g)<GAP;
+const linkOpen=L=>L.p.some(p=>covers(rings[L.a],p)||covers(rings[L.b],p));
+function isFree(i){if(rings[i].pins.some(a=>ad(a,rings[i].g)>=GAP))return false;return links.every(L=>{if(L.a!==i&&L.b!==i)return true;const o=L.a===i?L.b:L.a;return rings[o].gone||linkOpen(L);});}
+
+function load(n,keepFail){lvl=n;over=false;tray=[];flyers=[];parts=[];drag=null;if(!keepFail)failedOnce=false;
+  const D=LEVELS[n],Lo=LAYOUTS[D.l];moves=D.m;
+  rings=Lo.pts.map(([x,y],i)=>({x,y,r:Lo.r,c:D.c[i],g:D.g[i]*Math.PI/180,gone:false,shake:0,pins:[]}));
+  D.p.forEach(([i,a])=>rings[i].pins.push(a*Math.PI/180));
+  links=[];for(let i=0;i<rings.length;i++)for(let j=i+1;j<rings.length;j++){const p=inter(rings[i],rings[j]);if(p)links.push({a:i,b:j,p});}
+  $('lv').textContent='Seviye '+(n+1)+' / '+LEVELS.length+' · '+D.role;$('hint').textContent=D.h;$('ov').classList.remove('on');hud();}
+function hud(){$('mv').textContent=moves;$('st').textContent=streak;}
+
+// ses ve titreşim
+let ac=null;
+function audio(){if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ac&&ac.state==='suspended')ac.resume();}
+function tone(f,d,type,v,delay){if(!ac)return;const t=ac.currentTime+(delay||0),o=ac.createOscillator(),g=ac.createGain();
+  o.type=type||'sine';o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(v||.08,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+d+.02);}
+function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}}
+const sfx={tick:()=>{tone(2200,.025,'triangle',.035);buzz(4);},
+  free:()=>tone(1320,.08,'sine',.05),
+  rel:()=>{tone(784,.12,'sine',.09);tone(1175,.18,'sine',.07,.06);buzz(15);},
+  lock:()=>{tone(150,.12,'square',.05);buzz([20,30,20]);},
+  clear:()=>{[880,1109,1319,1760].forEach((f,i)=>tone(f,.16,'triangle',.07,i*.05));buzz(30);},
+  win:()=>[523,659,784,1047,1319].forEach((f,i)=>tone(f,.25,'triangle',.08,i*.09)),
+  lose:()=>[392,330,262].forEach((f,i)=>tone(f,.3,'sawtooth',.04,i*.12))};
+
+// çizim
+function resize(){const r=cv.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,3);
+  cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.width*H/W*dpr);scale=r.width/W;}
+const ro=new ResizeObserver(resize);ro.observe(cv);
+function inGap(r,a){return ad(a,r.g)<GAP;}
+function arc(r,a0,a1,w,color){ctx.beginPath();let pen=false;const st=.03;
+  for(let a=a0;a<=a1+1e-6;a+=st){const ok=!inGap(r,a);const x=r.x+Math.cos(a)*r.r,y=r.y+Math.sin(a)*r.r;
+    if(ok){pen?ctx.lineTo(x,y):ctx.moveTo(x,y);pen=true;}else pen=false;}
+  ctx.lineWidth=w;ctx.strokeStyle=color;ctx.lineCap='round';ctx.stroke();}
+function ringBody(r,a0,a1){arc(r,a0,a1,15,'rgba(20,4,16,.55)');arc(r,a0,a1,11,COL[r.c].c);
+  const s={...r,r:r.r-2.5};arc(s,a0,a1,2.5,COL[r.c].l);}
+function bead(x,y,c,rad){const k=COL[c];ctx.save();ctx.translate(x,y);
+  ctx.beginPath();ctx.arc(0,0,rad,0,7);ctx.fillStyle=k.c;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#f6dd94';ctx.stroke();
+  ctx.fillStyle='#fff';const s=rad*.45;ctx.beginPath();
+  if(k.s==='heart'){ctx.moveTo(0,s*.9);ctx.bezierCurveTo(-s*1.6,-s*.2,-s*.6,-s*1.3,0,-s*.4);ctx.bezierCurveTo(s*.6,-s*1.3,s*1.6,-s*.2,0,s*.9);}
+  else if(k.s==='diamond'){ctx.moveTo(0,-s);ctx.lineTo(s*.8,0);ctx.lineTo(0,s);ctx.lineTo(-s*.8,0);ctx.closePath();}
+  else {ctx.moveTo(0,-s);ctx.lineTo(s,s*.8);ctx.lineTo(-s,s*.8);ctx.closePath();}
+  ctx.fill();ctx.beginPath();ctx.arc(-rad*.35,-rad*.4,rad*.22,0,7);ctx.fillStyle='rgba(255,255,255,.55)';ctx.fill();ctx.restore();}
+function slotX(i){return 60+i*60;}
+function draw(now){const time=(now-t0)/1000;
+  ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);ctx.clearRect(0,0,W,H);
+  // tepsi
+  ctx.fillStyle='rgba(15,3,12,.45)';ctx.beginPath();ctx.roundRect(18,428,324,68,22);ctx.fill();
+  for(let i=0;i<SLOTS;i++){ctx.beginPath();ctx.arc(slotX(i),SLOT_Y,19,0,7);ctx.lineWidth=2;ctx.strokeStyle='rgba(227,196,115,.5)';ctx.stroke();}
+  tray.forEach((c,i)=>bead(slotX(i),SLOT_Y,c,16));
+  // halkalar
+  rings.forEach((r,i)=>{if(r.gone)return;const sx=r.shake>0?Math.sin(r.shake*60)*4*r.shake:0;r.dx=sx;});
+  rings.forEach((r,i)=>{if(r.gone)return;ctx.save();ctx.translate(r.dx||0,0);
+    if(isFree(i)&&!over){ctx.shadowColor='#ffe08a';ctx.shadowBlur=12+8*Math.sin(time*5);}
+    ringBody(r,0,Math.PI*2);ctx.restore();});
+  // örgü görünümü: kesişimlerde bir halka üstten geçer
+  links.forEach(L=>{const A=rings[L.a],B=rings[L.b];if(A.gone||B.gone)return;
+    [[A,L.p[0]],[B,L.p[1]]].forEach(([r,p])=>{const a=angOf(r,p);ctx.save();ctx.translate(r.dx||0,0);ringBody(r,a-.28,a+.28);ctx.restore();});});
+  rings.forEach(r=>{if(r.gone)return;r.pins.forEach(a=>{const x=r.x+(r.dx||0)+Math.cos(a)*r.r,y=r.y+Math.sin(a)*r.r;
+    ctx.beginPath();ctx.arc(x,y,8,0,7);ctx.fillStyle='#2a0d22';ctx.fill();ctx.beginPath();ctx.arc(x,y,6,0,7);
+    const gr=ctx.createRadialGradient(x-2,y-2,1,x,y,6);gr.addColorStop(0,'#fff2c2');gr.addColorStop(1,'#b8892c');ctx.fillStyle=gr;ctx.fill();});});
+  rings.forEach(r=>{if(r.gone)return;const a=r.g+Math.PI;bead(r.x+(r.dx||0)+Math.cos(a)*r.r,r.y+Math.sin(a)*r.r,r.c,11);});
+  flyers.forEach(f=>{const e=1-Math.pow(1-Math.min(f.t,1),3);bead(f.x+(f.tx-f.x)*e,f.y+(f.ty-f.y)*e-Math.sin(e*Math.PI)*40,f.c,11+5*e);});
+  parts.forEach(p=>{ctx.globalAlpha=Math.max(p.l,0);ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,3,0,7);ctx.fill();});ctx.globalAlpha=1;}
+
+let last=performance.now();
+function loop(now){const dt=Math.min((now-last)/1000,.05);last=now;
+  rings.forEach(r=>{if(r.shake>0)r.shake=Math.max(0,r.shake-dt*2.5);});
+  flyers.forEach(f=>f.t+=dt/.45);
+  const done=flyers.filter(f=>f.t>=1);flyers=flyers.filter(f=>f.t<1);done.forEach(arrive);
+  parts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=300*dt;p.l-=dt*1.4;});parts=parts.filter(p=>p.l>0);
+  draw(now);requestAnimationFrame(loop);}
+
+// kurallar
+function release(i){const r=rings[i];r.gone=true;sfx.rel();
+  const a=r.g+Math.PI,idx=tray.length+flyers.length;
+  flyers.push({c:r.c,x:r.x+Math.cos(a)*r.r,y:r.y+Math.sin(a)*r.r,tx:slotX(Math.min(idx,SLOTS-1)),ty:SLOT_Y,t:0});}
+function arrive(f){tray.push(f.c);
+  const n=tray.filter(c=>c===f.c).length;
+  if(n>=3){let k=0;tray.forEach((c,i)=>{if(c===f.c&&k<3){for(let q=0;q<14;q++)parts.push({x:slotX(i),y:SLOT_Y,vx:(Math.random()-.5)*260,vy:-Math.random()*260,l:1,c:COL[c].l});}if(c===f.c)k++;});
+    k=0;tray=tray.filter(c=>!(c===f.c&&k++<3));sfx.clear();}
+  check();}
+function check(){if(over||flyers.length)return;
+  if(rings.every(r=>r.gone)&&!tray.length){over=true;sfx.win();if(!failedOnce)streak++;hud();
+    const end=lvl===LEVELS.length-1;show('Bileklik çözüldü!',(failedOnce?'':'Seri: '+streak+'. ')+(end?'8 seviyenin hepsini bitirdin!':'Sıradaki bileklik hazır.'),end?'Baştan oyna':'Sonraki seviye',()=>load(end?0:lvl+1));}
+  else if(tray.length>=SLOTS){over=true;fail();show('Tepsi doldu','Aynı renkleri arka arkaya çıkarmayı dene.','Tekrar dene',()=>{streak=0;load(lvl,true);});}
+  else if(moves<=0&&!rings.some((r,i)=>!r.gone&&isFree(i))){over=true;fail();
+    show('Hamlen bitti',streakText()+'Az kaldı: '+rings.filter(r=>!r.gone).length+' halka kaldı!','+3 hamle (deneme)',()=>{over=false;moves+=3;hud();$('ov').classList.remove('on');},'Tekrar dene',()=>{streak=0;load(lvl,true);});}}
+function fail(){sfx.lose();failedOnce=true;}
+function streakText(){return streak>0?'Serin ('+streak+') yanacak! ':'';}
+function show(t,p,b,fn,b2,fn2){$('ot').textContent=t;$('op').textContent=p;$('ob').textContent=b;$('ob').onclick=()=>{audio();fn();};
+  const o2=$('ob2');o2.style.display=b2?'':'none';if(b2){o2.textContent=b2;o2.onclick=()=>{audio();fn2();hud();};}$('ov').classList.add('on');}
+
+// dokunma
+function pt(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*W,y:(e.clientY-r.top)/r.width*W};}
+function pick(p){let best=-1,bd=1e9;rings.forEach((r,i)=>{if(r.gone)return;const d=Math.abs(Math.hypot(p.x-r.x,p.y-r.y)-r.r);if(d<26&&d<bd){bd=d;best=i;}});
+  if(best<0)rings.forEach((r,i)=>{if(r.gone)return;const d=Math.hypot(p.x-r.x,p.y-r.y);if(d<r.r&&d<bd){bd=d;best=i;}});return best;}
+cv.addEventListener('pointerdown',e=>{audio();if(over)return;const p=pt(e),i=pick(p);if(i<0)return;if(moves<=0&&!isFree(i)){rings[i].shake=1;sfx.lock();return;}
+  cv.setPointerCapture(e.pointerId);const r=rings[i];
+  drag={i,a:Math.atan2(p.y-r.y,p.x-r.x),moved:0,acc:0,t:performance.now(),wasFree:isFree(i)};});
+cv.addEventListener('pointermove',e=>{if(!drag)return;const p=pt(e),r=rings[drag.i],a=Math.atan2(p.y-r.y,p.x-r.x);
+  const d=Math.atan2(Math.sin(a-drag.a),Math.cos(a-drag.a));drag.a=a;r.g+=d;drag.moved+=Math.abs(d);drag.acc+=Math.abs(d);
+  if(drag.acc>.26){drag.acc=0;sfx.tick();}
+  const f=isFree(drag.i);if(f&&!drag.wasFree)sfx.free();drag.wasFree=f;});
+function up(){if(!drag)return;const {i,moved,t}=drag;drag=null;
+  if(moved<.08&&performance.now()-t<350){if(isFree(i))release(i);else{rings[i].shake=1;sfx.lock();}return;}
+  if(moved>.14){moves=Math.max(0,moves-1);hud();check();}}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',()=>{drag=null;});
+$('rs').addEventListener('click',()=>{audio();load(lvl);});
+
+load(0);requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
