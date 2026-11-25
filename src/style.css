@@ -185,3 +185,12 @@ header h1{font-size:clamp(19px,5.6vw,24px)}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{touch-action:manipulation}
 .ov.sheet,.ov.sheet#shop,.ov.sheet#work,.ov.sheet#map{padding-top:max(22px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom));padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+
+/* phone app: the page itself never scrolls or rubber-bands, and no scroll bars are drawn (lists inside sheets still scroll) */
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+*{scrollbar-width:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
+/* phone app: the page itself never scrolls or bounces, and inner lists scroll without a visible bar */
+html,body{overscroll-behavior:none}
+*{scrollbar-width:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}

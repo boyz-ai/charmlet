@@ -4,7 +4,7 @@ const config: CapacitorConfig = {
   appId: 'com.mucahitkurkaya.charmlet',
   appName: 'Charmlet',
   webDir: 'dist',
-  ios: { contentInset: 'never', backgroundColor: '#2a0d24' },
+  ios: { contentInset: 'never', backgroundColor: '#2a0d24', scrollEnabled: false },
   plugins: {
     SplashScreen: { launchShowDuration: 900, backgroundColor: '#2a0d24', showSpinner: false, launchAutoHide: true },
     StatusBar: { overlaysWebView: true, style: 'DARK' },

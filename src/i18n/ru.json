@@ -1,6 +1,6 @@
 {
   "title": "Charmlet",
-  "level": "Уровень {n} / {total}",
+  "level": "Уровень {n}",
   "play": "Играть",
   "playLevel": "Уровень {n}",
   "restart": "Заново",

@@ -1,6 +1,6 @@
 {
   "title": "Charmlet",
-  "level": "Seviye {n} / {total}",
+  "level": "Seviye {n}",
   "play": "Oyna",
   "playLevel": "Seviye {n}",
   "restart": "Baştan",

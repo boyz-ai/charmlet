@@ -1,6 +1,6 @@
 {
   "title": "Charmlet",
-  "level": "Nivel {n} / {total}",
+  "level": "Nivel {n}",
   "play": "Jugar",
   "playLevel": "Nivel {n}",
   "restart": "Reiniciar",

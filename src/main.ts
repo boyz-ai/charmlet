@@ -68,7 +68,7 @@ function applyTexts(): void {
 }
 function levelTexts(): void {
   const spec = LEVELS[level];
-  $('lv').textContent = `${t('level', { n: level + 1, total: LEVELS.length })} · ${t('role.' + spec.role)}`;
+  $('lv').textContent = `${t('level', { n: level + 1 })} · ${t('role.' + spec.role)}`;
   $('hint').textContent = t('hint.' + spec.role);
 }
 function homeTexts(): void {

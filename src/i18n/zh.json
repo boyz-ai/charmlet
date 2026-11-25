@@ -1,6 +1,6 @@
 {
   "title": "Charmlet",
-  "level": "第 {n} / {total} 关",
+  "level": "第 {n} 关",
   "play": "开始",
   "playLevel": "第 {n} 关",
   "restart": "重来",
