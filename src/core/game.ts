@@ -18,6 +18,12 @@ export interface Ring {
   lock: boolean;
   /** rotations left for an ice ring (null = not ice) */
   ice: number | null;
+  /** turning it costs 2 moves */
+  heavy: boolean;
+  /** bomb: the level is lost when this many moves have been spent while the ring is still on the board (null = no bomb) */
+  bomb: number | null;
+  /** color lock: stays until a triple of this color merged in the tray (null = none) */
+  clock: Color | null;
 }
 
 /** Max rotations of an ice ring. */
@@ -31,7 +37,7 @@ export type GameEvent =
   | { type: 'becameFree'; ring: number }
   | { type: 'move'; movesLeft: number }
   | { type: 'win' }
-  | { type: 'lose'; reason: 'tray' | 'moves' }
+  | { type: 'lose'; reason: 'tray' | 'moves' | 'bomb' }
   | { type: 'undo'; ring: number }
   | { type: 'slot'; slots: number }
   | { type: 'magnet'; color: Color; slots: number[] };
@@ -52,11 +58,15 @@ export class Game {
   moves: number;
   /** number of merges so far (opens lock rings) */
   merges = 0;
+  /** merges per color (opens color-lock rings) */
+  mergesBy: Record<Color, number> = { r: 0, b: 0, g: 0 };
+  /** moves spent on rotations (drives the bomb countdowns) */
+  spent = 0;
   state: GameState = 'play';
   /** tray size for this level (the Extra slot booster raises it to TRAY_SLOTS + 1) */
   slots = TRAY_SLOTS;
   /** counted rotations that can be undone (most recent last) */
-  private history: { ring: number; g: number; ice: number | null }[] = [];
+  private history: { ring: number; g: number; ice: number | null; cost?: number }[] = [];
   /** ring and gap angle at the start of the current drag */
   private dragFrom: { ring: number; g: number; ice: number | null } | null = null;
   private listeners: ((e: GameEvent) => void)[] = [];
@@ -67,6 +77,9 @@ export class Game {
       x, y, r: layout.r, c: spec.colors[i], g: (spec.gaps[i] * Math.PI) / 180, gone: false, pins: [],
       fixed: !!spec.fixed?.includes(i), twin: !!spec.twin?.includes(i), lock: !!spec.lock?.includes(i),
       ice: spec.ice?.includes(i) ? ICE_ROTATIONS : null,
+      heavy: !!spec.heavy?.includes(i),
+      bomb: spec.bomb?.find(([k]) => k === i)?.[1] ?? null,
+      clock: spec.clock?.find(([k]) => k === i)?.[1] ?? null,
     }));
     spec.pins.forEach(([i, deg]) => this.rings[i].pins.push((deg * Math.PI) / 180));
     for (let i = 0; i < this.rings.length; i++)
@@ -94,6 +107,7 @@ export class Game {
     const r = this.rings[i];
     if (r.gone) return false;
     if (r.lock && this.merges < 1) return false;
+    if (r.clock && this.mergesBy[r.clock] < 1) return false;
     if (r.pins.some(a => !this.inGap(i, a))) return false;
     return this.links.every(L => {
       if (L.a !== i && L.b !== i) return true;
@@ -107,7 +121,11 @@ export class Game {
   /** Can ring i ever turn again? (fixed rings never; ice rings only while they have rotations left) */
   rotatable(i: number): boolean { const r = this.rings[i]; return !r.gone && !r.fixed && (r.ice === null || r.ice > 0); }
   /** Can the player rotate ring i right now? */
-  canRotate(i: number): boolean { return this.state === 'play' && this.moves > 0 && this.rotatable(i); }
+  canRotate(i: number): boolean { return this.state === 'play' && this.moves >= this.cost(i) && this.rotatable(i); }
+  /** Moves one rotation of ring i costs (heavy rings cost 2). */
+  cost(i: number): number { return this.rings[i].heavy ? 2 : 1; }
+  /** Moves left before bomb ring i explodes (null = not a bomb). */
+  bombLeft(i: number): number | null { const b = this.rings[i].bomb; return b === null ? null : Math.max(0, b - this.spent); }
 
   /** Rotate during a drag. Emits becameFree when the ring turns free. */
   rotate(i: number, delta: number): void {
@@ -123,8 +141,10 @@ export class Game {
     const from = this.dragFrom;
     this.dragFrom = null;
     if (this.state !== 'play' || totalTurn <= MOVE_THRESHOLD) return;
-    if (from && from.ring === i) this.history.push(from);
-    this.moves = Math.max(0, this.moves - 1);
+    const cost = i === undefined ? 1 : this.cost(i);
+    if (from && from.ring === i) this.history.push({ ...from, cost });
+    this.moves = Math.max(0, this.moves - cost);
+    this.spent += cost;
     const r = i === undefined ? undefined : this.rings[i];
     if (r && r.ice !== null) r.ice = Math.max(0, r.ice - 1);
     this.emit({ type: 'move', movesLeft: this.moves });
@@ -153,6 +173,7 @@ export class Game {
       const slots = idx.slice(0, MERGE_COUNT);
       this.tray = this.tray.filter((_, k) => !slots.includes(k));
       this.merges++;
+      this.mergesBy[color]++;
       this.emit({ type: 'merge', color, slots });
     }
     this.checkEnd();
@@ -202,7 +223,7 @@ export class Game {
 
   // ---------- boosters ----------
   /** Why the level was lost (null while playing / won). */
-  loseReason: 'tray' | 'moves' | null = null;
+  loseReason: 'tray' | 'moves' | 'bomb' | null = null;
 
   canUndo(): boolean { return this.state === 'play' && this.history.some(h => !this.rings[h.ring].gone); }
   /** Undo booster: puts the last counted rotation back and refunds its move (and ice charge). */
@@ -212,7 +233,8 @@ export class Game {
     const h = this.history.pop()!;
     const r = this.rings[h.ring];
     r.g = h.g; r.ice = h.ice;
-    this.moves++;
+    this.moves += h.cost ?? 1;
+    this.spent -= h.cost ?? 1;
     this.emit({ type: 'undo', ring: h.ring });
     this.emit({ type: 'move', movesLeft: this.moves });
     return true;
@@ -257,8 +279,11 @@ export class Game {
     // all rings out = win (charms a Magnet pulled can leave a partial color behind, so the tray need not be empty)
     if (this.rings.every(r => r.gone)) { this.tray = []; this.state = 'won'; this.emit({ type: 'win' }); return; }
     if (this.tray.length >= this.slots) { this.state = 'lost'; this.loseReason = 'tray'; this.emit({ type: 'lose', reason: 'tray' }); return; }
+    if (this.rings.some(r => !r.gone && r.bomb !== null && this.spent >= r.bomb)) {
+      this.state = 'lost'; this.loseReason = 'bomb'; this.emit({ type: 'lose', reason: 'bomb' }); return;
+    }
     // lost when nothing is free and nothing can change any more (out of moves, or every ring is fixed / out of ice)
-    if (!this.anyFree() && (this.moves <= 0 || !this.rings.some((_, i) => this.rotatable(i)))) {
+    if (!this.anyFree() && !this.rings.some((_, i) => this.rotatable(i) && this.moves >= this.cost(i))) {
       this.state = 'lost'; this.loseReason = 'moves'; this.emit({ type: 'lose', reason: 'moves' });
     }
   }

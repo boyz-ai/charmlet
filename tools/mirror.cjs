@@ -25,6 +25,9 @@ const out = src.map((lv, k) => {
     gaps: inv.map(i => norm(lv.gaps[i])),
     pins: lv.pins.map(([i, d]) => [map[i], norm(d)]),
     fixed: re(lv.fixed), twin: re(lv.twin), lock: re(lv.lock), ice: re(lv.ice),
+    ...(lv.heavy ? { heavy: re(lv.heavy) } : {}),
+    ...(lv.bomb ? { bomb: lv.bomb.map(([i, t]) => [map[i], t]) } : {}),
+    ...(lv.clock ? { clock: lv.clock.map(([i, c]) => [map[i], perm[c]]) } : {}),
     role: lv.role, minMoves: lv.minMoves, moves: lv.moves,
     sol: (lv.sol ?? []).map(([i, d]) => [map[i], d === null ? null : norm(d)]),
   };

@@ -36,6 +36,12 @@ export interface LevelSpec {
   twin?: number[];
   lock?: number[];
   ice?: number[];
+  /** turning costs 2 moves */
+  heavy?: number[];
+  /** [ring, countdown in moves] */
+  bomb?: [number, number][];
+  /** [ring, color whose triple opens it] */
+  clock?: [number, Color][];
   role: string;
   /** solver-verified solution: [ring, gap angle in degrees] = rotate, [ring, null] = tap */
   sol?: [number, number | null][];

@@ -10,6 +10,7 @@ import {
   BOOSTERS, BOOSTER_PRICE, CONTINUE_MOVES, CONTINUE_PRICE, DAILY, buyContinue, claimDaily, dailyAvailable, dayKey,
   refundBooster, spendBooster, streakBonus, winCoins, autoHint, HINT_NUDGE_FAILS, type Booster,
 } from './meta/meta';
+import { PRODUCTS, TestAds, TestDialog, TestIAP, canBuy, grant, interstitialDue, type AdService, type IAPService } from './services/monetize';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
 const cv = $<HTMLCanvasElement>('c');
@@ -26,6 +27,13 @@ let idle = 0;
 const TUTORIAL_LEVELS = 3, TUTORIAL_HINT_DELAY = 0.8, HINT_DELAY = 5;
 /** losses on the current level (glows the Hint button after HINT_NUDGE_FAILS) */
 let fails = 0;
+/** true while the player replays a level they already finished (no rewards, no streak) */
+let replay = false;
+// ads + purchases (test implementations until the native build)
+const dialog = new TestDialog($('td'), t);
+const ads: AdService = new TestAds(dialog);
+const iap: IAPService = new TestIAP(dialog, t);
+let lastAdS = -1e9;
 const resetIdle = (): void => { idle = 0; renderer.hint = null; };
 let game!: Game;
 /** streak-bonus message waiting for the home screen to close */
@@ -48,7 +56,7 @@ function levelTexts(): void {
   $('hint').textContent = t('hint.' + spec.role);
 }
 function homeTexts(): void {
-  $('playBtn').textContent = `${t('play')} · ${t('playLevel', { n: level + 1 })}`;
+  $('playBtn').textContent = `${t('play')} · ${t('playLevel', { n: save.level + 1 })}`;
   $('homeStreak').textContent = save.streak > 0 ? t('streakNow', { n: save.streak }) : '';
   $('homeCoins').textContent = String(save.coins);
   $('dailyBtn').classList.toggle('glow', dailyAvailable(save, dayKey(new Date())) !== null);
@@ -74,8 +82,9 @@ function toast(msg: string): void {
 function setLanguage(l: Lang): void { save.lang = l; setLang(l); persist(); applyTexts(); }
 
 // ---------- game ----------
-function load(n: number, keepFail = false): void {
+function load(n: number, keepFail = false, isReplay = false): void {
   level = n;
+  if (!keepFail) replay = isReplay;
   if (!keepFail) { failedOnce = false; fails = 0; }
   const spec = LEVELS[n];
   game = new Game(spec, LAYOUTS[spec.layout]);
@@ -89,14 +98,14 @@ function load(n: number, keepFail = false): void {
       case 'move': hud(); resetIdle(); break;
       case 'win': onWin(); break;
       case 'lose': onLose(e.reason); break;
-      case 'magnet': fb.merge(); renderer.pull(e.slots, e.color); break;
+      case 'magnet': fb.whoosh(); renderer.pull(e.slots, e.color); break;
       case 'slot': fb.becameFree(); break;
       case 'undo': fb.tick(); resetIdle(); break;
     }
     if (e.type !== 'becameFree') boosterTexts();
   });
   // win streak: 3+ first-try wins in a row → this level starts with bonus moves
-  const bonus = keepFail ? 0 : streakBonus(save.streak);
+  const bonus = keepFail || replay ? 0 : streakBonus(save.streak);
   bonusMsg = bonus ? t('streakBonus', { n: bonus, s: save.streak }) : '';
   if (bonus) game.moves += bonus;
   if (bonusMsg && !overlayOpen()) { toast(bonusMsg); bonusMsg = ''; }
@@ -115,24 +124,43 @@ function hud(): void {
 function onWin(): void {
   fb.win();
   renderer.confetti();
+  if (replay) {
+    show(t('winTitle'), t('replayDone'), t('continueAt', { n: save.level + 1 }), () => load(save.level), t('backToMap'), () => openMap());
+    return;
+  }
   if (!failedOnce) save.streak++;
   const coins = winCoins(LEVELS[level].role);
   save.coins += coins;
   const last = level === LEVELS.length - 1;
+  save.best = Math.max(save.best, level + 1);
   save.level = last ? 0 : level + 1;
+  save.levelsSinceAd++;
   persist();
   hud();
-  show(t('winTitle'), t('winCoins', { n: coins }) + (failedOnce ? '' : t('winStreak', { n: save.streak })) + (last ? t('winLast') : t('winNext')),
-    last ? t('again') : t('next'), () => load(save.level));
+  const text = t('winCoins', { n: coins }) + (failedOnce ? '' : t('winStreak', { n: save.streak })) + (last ? t('winLast') : t('winNext'));
+  // a forced ad may come after this win → then no 2× offer (GDD: never an ad right after declining 2×)
+  const adNext = interstitialDue(save, performance.now() / 1000, lastAdS, false);
+  const next = async (): Promise<void> => {
+    if (adNext) { await ads.showInterstitial(); lastAdS = performance.now() / 1000; save.levelsSinceAd = 0; persist(); }
+    load(save.level);
+  };
+  if (adNext) show(t('winTitle'), text, last ? t('again') : t('next'), () => void next());
+  else show(t('winTitle'), text, last ? t('again') : t('next'), () => load(save.level), t('doubleCoins', { n: coins }), async () => {
+    if (await ads.showRewarded('double')) { save.coins += coins; persist(); hud(); toast(t('doubled')); }
+    load(save.level);
+  });
 }
 
-function onLose(reason: 'tray' | 'moves'): void {
+function onLose(reason: 'tray' | 'moves' | 'bomb'): void {
   fb.lose();
   failedOnce = true;
   fails++;
-  const retry = (): void => { save.streak = 0; persist(); load(level, true); };
-  const burn = save.streak > 0 ? t('streakBurn', { n: save.streak }) : '';
-  if (reason === 'tray') {
+  const retry = (): void => { if (!replay) { save.streak = 0; persist(); } load(level, true); };
+  const burn = save.streak > 0 && !replay ? t('streakBurn', { n: save.streak }) : '';
+  if (reason === 'bomb') {
+    fb.boom(); renderer.kick(0, 6);
+    show(t('bombTitle'), burn + t('bombText'), t('retry'), retry);
+  } else if (reason === 'tray') {
     // rescue with the booster bar below the board (Magnet / Extra slot)
     const rescue = canUse('magnet') || canUse('slot') ? t('trayRescue') : t('trayFullText');
     show(t('trayFullTitle'), burn + rescue, t('retry'), retry);
@@ -140,21 +168,24 @@ function onLose(reason: 'tray' | 'moves'): void {
     const left = game.rings.filter(r => !r.gone).length;
     const cont = (): void => { game.addMoves(CONTINUE_MOVES); hideOverlay(); hud(); };
     // coins first; without coins a rewarded ad will go here (M7) — for now a free test button
+    const watch = async (): Promise<void> => { if (await ads.showRewarded('continue')) cont(); };
     if (save.coins >= CONTINUE_PRICE)
-      show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('continueCoins', { n: CONTINUE_MOVES, p: CONTINUE_PRICE }),
-        () => { if (buyContinue(save)) { persist(); cont(); } }, t('retry'), retry);
+      show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('watchMoves'), () => void watch(),
+        t('continueCoins', { n: CONTINUE_MOVES, p: CONTINUE_PRICE }), () => { if (buyContinue(save)) { persist(); cont(); } }, t('retry'), retry);
     else
-      show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('plusMoves'), cont, t('retry'), retry);
+      show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('watchMoves'), () => void watch(), t('retry'), retry);
   }
 }
 
 // ---------- overlays ----------
-function show(title: string, text: string, b1: string, f1: () => void, b2?: string, f2?: () => void): void {
+function show(title: string, text: string, b1: string, f1: () => void, b2?: string, f2?: () => void, b3?: string, f3?: () => void): void {
   $('ot').textContent = title; $('op').textContent = text;
-  const o1 = $('ob'), o2 = $('ob2');
+  const o1 = $('ob'), o2 = $('ob2'), o3 = $('ob3');
   o1.textContent = b1; o1.onclick = () => { fb.unlock(); f1(); hud(); };
   o2.style.display = b2 ? '' : 'none';
   if (b2 && f2) { o2.textContent = b2; o2.onclick = () => { fb.unlock(); f2(); hud(); }; }
+  o3.style.display = b3 ? 'block' : 'none';
+  if (b3 && f3) { o3.textContent = b3; o3.onclick = () => { fb.unlock(); f3(); hud(); }; }
   $('ov').classList.add('on');
 }
 function hideOverlay(): void { $('ov').classList.remove('on'); }
@@ -168,6 +199,57 @@ function openSettings(): void {
   $('setClose').focus();
 }
 function closeSettings(): void { $('settings').classList.remove('on'); boosterTexts(); }
+
+// ---------- shop ----------
+function openShop(): void {
+  $('shopCoins').textContent = String(save.coins);
+  $('shopList').innerHTML = PRODUCTS.map(p => {
+    const can = canBuy(save, p);
+    return `<li class="${p.id === 'coins_l' ? 'best' : ''}"><div class="pi"><b>${t('p.' + p.id)}${p.id === 'coins_l' ? ' · ' + t('bestValue') : ''}</b><span>${t('pd.' + p.id)}</span></div>` +
+      `<button data-p="${p.id}" ${can ? '' : 'disabled'}>${can ? p.price : t('owned1')}</button></li>`;
+  }).join('');
+  $('shop').classList.add('on');
+}
+function closeShop(): void { $('shop').classList.remove('on'); hud(); homeTexts(); }
+$('shopList').addEventListener('click', async e => {
+  const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-p]');
+  const p = PRODUCTS.find(x => x.id === btn?.dataset.p);
+  if (!p || !canBuy(save, p)) return;
+  fb.unlock();
+  if (await iap.buy(p)) { grant(save, p); persist(); fb.win(); toast(t('bought')); openShop(); }
+});
+
+// ---------- level map ----------
+const CHAPTER = 50;
+let mapChapter = 0;
+const unlocked = (): number => Math.max(save.best, save.level); // levels below this index are finished
+function openMap(ch = Math.floor(save.level / CHAPTER)): void {
+  mapChapter = Math.max(0, Math.min(ch, Math.ceil(LEVELS.length / CHAPTER) - 1));
+  const a = mapChapter * CHAPTER, b = Math.min(LEVELS.length, a + CHAPTER);
+  const done = Math.max(0, Math.min(b, unlocked()) - a);
+  $('mapTitle').textContent = t('chapter', { n: mapChapter + 1 });
+  $('mapSub').textContent = t('chapterSub', { a: a + 1, b, done, total: b - a });
+  $<HTMLButtonElement>('mapPrev').disabled = mapChapter === 0;
+  $<HTMLButtonElement>('mapNext').disabled = b >= LEVELS.length;
+  let html = '';
+  for (let r = a; r < b; r += 5) {
+    html += `<li class="prow${((r - a) / 5) % 2 ? ' rev' : ''}">`;
+    for (let i = r; i < Math.min(b, r + 5); i++) {
+      const role = LEVELS[i].role, cur = i === save.level, open = i < unlocked() || cur;
+      const cls = ['node', cur ? 'cur' : open ? 'done' : 'locked', role === 'hard' || role === 'super' ? role : ''].join(' ');
+      const mark = role === 'bonus' ? '<i aria-hidden="true">🎁</i>' : role === 'super' ? '<i aria-hidden="true">🔥</i>' : '';
+      const nw = role.startsWith('new_') ? `<b>${t('new')}</b>` : '';
+      html += `<button class="${cls}" data-l="${i}" ${open ? '' : 'disabled'} aria-label="${t('playLevel', { n: i + 1 })}">${i + 1}${mark}${nw}</button>`;
+    }
+    html += '</li>';
+  }
+  $('path').innerHTML = html;
+  $('map').classList.add('on');
+  ($('path').querySelector('.cur') as HTMLElement | null)?.scrollIntoView({ block: 'center' });
+  hideOverlay();
+  boosterTexts();
+}
+function closeMap(): void { $('map').classList.remove('on'); boosterTexts(); }
 
 // ---------- daily reward ----------
 const rewardText = (i: number): string => {
@@ -198,7 +280,7 @@ function claimToday(): void {
 }
 
 // ---------- boosters ----------
-const overlayOpen = (): boolean => ['home', 'settings', 'daily'].some(id => $(id).classList.contains('on'));
+const overlayOpen = (): boolean => ['home', 'settings', 'daily', 'map', 'shop', 'td'].some(id => $(id).classList.contains('on'));
 function canUse(b: Booster): boolean {
   if (!game || overlayOpen()) return false;
   if (b === 'hint') return game.state === 'play' && !renderer.hint && game.suggest() !== null;
@@ -227,6 +309,21 @@ $('homeSet').addEventListener('click', () => { fb.unlock(); openSettings(); });
 $('playBtn').addEventListener('click', () => { fb.unlock(); closeHome(); if (game.state !== 'play' || level !== save.level) load(save.level); });
 $('setClose').addEventListener('click', closeSettings);
 $('dailyBtn').addEventListener('click', () => { fb.unlock(); openDaily(); });
+$('shopBtn').addEventListener('click', () => { fb.unlock(); openShop(); });
+$('coinPill').addEventListener('click', () => { fb.unlock(); openShop(); });
+$('shopClose').addEventListener('click', closeShop);
+$('mapBtn').addEventListener('click', () => { fb.unlock(); closeHome(); openMap(); });
+$('mapPrev').addEventListener('click', () => openMap(mapChapter - 1));
+$('mapNext').addEventListener('click', () => openMap(mapChapter + 1));
+$('mapClose').addEventListener('click', () => { closeMap(); openHome(); });
+$('path').addEventListener('click', e => {
+  const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.node');
+  if (!btn || btn.disabled) return;
+  fb.unlock();
+  const n = Number(btn.dataset.l);
+  closeMap();
+  load(n, false, n !== save.level);
+});
 $('dailyClaim').addEventListener('click', () => { fb.unlock(); claimToday(); });
 $('dailyClose').addEventListener('click', closeDaily);
 document.querySelectorAll<HTMLButtonElement>('.bst').forEach(btn => btn.addEventListener('click', () => useBooster(btn.dataset.b as Booster)));
@@ -234,7 +331,7 @@ $<HTMLInputElement>('optSound').addEventListener('change', e => { save.sound = f
 $<HTMLInputElement>('optVib').addEventListener('change', e => { save.vibration = fb.vibration = (e.target as HTMLInputElement).checked; persist(); });
 $('langTr').addEventListener('click', () => setLanguage('tr'));
 $('langEn').addEventListener('click', () => setLanguage('en'));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSettings(); closeDaily(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSettings(); closeDaily(); closeMap(); closeShop(); } });
 
 renderer.onLand = c => game.charmLanded(c);
 attachInput(cv, () => game, renderer, fb, resetIdle);
@@ -249,14 +346,17 @@ applyTexts();
 if (save.seenHome) { openHome(); if (dailyAvailable(save, dayKey(new Date())) !== null) openDaily(); }
 else { save.seenHome = true; persist(); }
 
+let saveTick = 0;
 let last = performance.now();
 const t0 = last;
 function frame(now: number): void {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
-  const blocked = ['ov', 'home', 'settings', 'daily'].some(id => $(id).classList.contains('on'));
+  const blocked = ['ov', 'home', 'settings', 'daily', 'map', 'shop', 'td'].some(id => $(id).classList.contains('on'));
   if (game.state === 'play' && !blocked) {
     idle += dt;
+    save.playTime += dt;
+    if ((saveTick += dt) > 10) { saveTick = 0; persist(); }
     const delay = level < TUTORIAL_LEVELS ? TUTORIAL_HINT_DELAY : HINT_DELAY;
     if (autoHint(level, LEVELS[level].role) && idle >= delay && !renderer.hint) renderer.hint = game.suggest();
   } else if (renderer.hint) resetIdle();

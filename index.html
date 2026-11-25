@@ -21,7 +21,7 @@
 
   <div class="box">
     <canvas id="c" aria-label="Board"></canvas>
-    <div class="ov" id="ov"><h2 id="ot"></h2><p id="op"></p><button id="ob"></button><button id="ob2" class="ghost"></button></div>
+    <div class="ov" id="ov"><h2 id="ot"></h2><p id="op"></p><button id="ob"></button><button id="ob2" class="ghost"></button><button id="ob3" class="ghost"></button></div>
 
     <section class="ov home" id="home">
       <div class="logo" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -30,8 +30,12 @@
       <button id="playBtn" class="big"></button>
       <p class="small" id="homeStreak"></p>
       <p class="small"><span class="coin" aria-hidden="true"></span> <b id="homeCoins">0</b> <span data-i18n="coins">Altın</span></p>
-      <button id="dailyBtn" class="ghost" data-i18n="daily">Günlük ödül</button>
-      <button id="homeSet" class="ghost" data-i18n="settings">Ayarlar</button>
+      <div class="hgrid">
+        <button id="dailyBtn" class="ghost" data-i18n="daily">Günlük ödül</button>
+        <button id="shopBtn" class="ghost" data-i18n="shop">Mağaza</button>
+        <button id="mapBtn" class="ghost" data-i18n="map">Harita</button>
+        <button id="homeSet" class="ghost" data-i18n="settings">Ayarlar</button>
+      </div>
     </section>
 
     <section class="ov sheet" id="daily" role="dialog" aria-modal="true" aria-labelledby="dailyTitle">
@@ -41,6 +45,25 @@
       <button id="dailyClaim" class="big"></button>
       <button id="dailyClose" class="ghost" data-i18n="close">Kapat</button>
     </section>
+
+    <section class="ov sheet" id="map" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
+      <div class="maphead">
+        <button id="mapPrev" class="icon" data-i18n-aria="prevChapter" aria-label="Önceki">‹</button>
+        <div><h2 id="mapTitle"></h2><p id="mapSub" class="small"></p></div>
+        <button id="mapNext" class="icon" data-i18n-aria="nextChapter" aria-label="Sonraki">›</button>
+      </div>
+      <ol class="path" id="path"></ol>
+      <button id="mapClose" class="ghost" data-i18n="close">Kapat</button>
+    </section>
+
+    <section class="ov sheet" id="shop" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+      <h2 id="shopTitle" data-i18n="shop">Mağaza</h2>
+      <p class="small"><span class="coin" aria-hidden="true"></span> <b id="shopCoins">0</b></p>
+      <ul class="shop" id="shopList"></ul>
+      <p class="small" data-i18n="testNote"></p>
+      <button id="shopClose" class="ghost" data-i18n="close">Kapat</button>
+    </section>
+    <div class="ov td" id="td" role="dialog" aria-modal="true"></div>
 
     <section class="ov sheet" id="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
       <h2 id="setTitle" data-i18n="settings">Ayarlar</h2>
@@ -53,7 +76,7 @@
     </section>
   </div>
 
-  <div class="hudrow"><div class="pill"><span data-i18n="moves">Hamle</span> <b id="mv">0</b></div><div class="pill" id="stPill"><span data-i18n="streak">Seri</span> <b id="st">0</b></div><div class="pill"><span class="coin" aria-hidden="true"></span><b id="cn">0</b></div></div>
+  <div class="hudrow"><div class="pill"><span data-i18n="moves">Hamle</span> <b id="mv">0</b></div><div class="pill" id="stPill"><span data-i18n="streak">Seri</span> <b id="st">0</b></div><button class="pill coinpill" id="coinPill" data-i18n-aria="shop" aria-label="Mağaza"><span class="coin" aria-hidden="true"></span><b id="cn">0</b> <span class="plus" aria-hidden="true">+</span></button></div>
   <div class="boosters" role="group" data-i18n-aria="boosters" aria-label="Güçlendiriciler">
     <button class="bst" id="bHint" data-b="hint"><span class="bi" aria-hidden="true">💡</span><span data-i18n="b.hint">İpucu</span><em></em></button>
     <button class="bst" id="bUndo" data-b="undo"><span class="bi" aria-hidden="true">↶</span><span data-i18n="b.undo">Geri al</span><em></em></button>

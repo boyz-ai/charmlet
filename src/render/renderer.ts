@@ -13,6 +13,12 @@ const COL: Record<Color, { c: string; l: string; s: 'heart' | 'diamond' | 'tri' 
   g: { c: '#25b47c', l: '#9af2cd', s: 'tri' },
 };
 
+/** Darken (amt < 0) or lighten a #rrggbb color. */
+function shade(hex: string, amt: number): string {
+  const n = parseInt(hex.slice(1), 16), f = (v: number): number => Math.round(Math.min(255, Math.max(0, amt < 0 ? v * (1 + amt) : v + (255 - v) * amt)));
+  return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+}
+
 interface Flyer { c: Color; x: number; y: number; tx: number; ty: number; t: number }
 interface Particle { x: number; y: number; vx: number; vy: number; l: number; c: string; on: boolean; size: number; grav: number; rect: boolean; rot: number }
 
@@ -146,7 +152,7 @@ export class Renderer {
     // charms
     game.rings.forEach((r, i) => {
       if (r.gone) return;
-      this.badge(game, r, dx(i));
+      this.badge(game, r, dx(i), i, time);
       const a = game.charmAngle(i);
       this.bead(r.x + dx(i) + Math.cos(a) * r.r, r.y + Math.sin(a) * r.r, r.c, 11);
     });
@@ -205,7 +211,7 @@ export class Renderer {
     ctx.lineWidth = w; ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.stroke();
   }
   private ringBody(r: Ring, a0: number, a1: number): void {
-    this.arc(r, a0, a1, 15, r.fixed ? '#cfd3da' : 'rgba(20,4,16,.55)');
+    this.arc(r, a0, a1, r.heavy ? 20 : 15, r.fixed ? '#cfd3da' : r.heavy ? '#4a3b44' : 'rgba(20,4,16,.55)');
     this.arc(r, a0, a1, 11, COL[r.c].c);
     this.arc(r, a0, a1, 2.5, COL[r.c].l, r.r - 2.5);
     if (r.ice !== null) {
@@ -214,40 +220,79 @@ export class Renderer {
       this.arc(r, a0, a1, 3, frost, r.r - 6);
     }
   }
-  /** Mechanic badge in the middle of a ring: bolt (fixed), padlock (lock), ice counter. */
-  private badge(game: Game, r: Ring, dx: number): void {
-    const ctx = this.ctx, x = r.x + dx, y = r.y;
-    if (r.fixed) {
+  /** Mechanic badges stacked in the middle of a ring: bolt, padlocks, ice counter, bomb, weight. */
+  private badge(game: Game, r: Ring, dx: number, i: number, time: number): void {
+    const ctx = this.ctx;
+    const draws: ((x: number, y: number) => void)[] = [];
+    const lock = (col: string) => (x: number, y: number): void => {
+      ctx.save(); ctx.translate(x, y); ctx.strokeStyle = col; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, -5, 6, Math.PI, 0); ctx.stroke();
+      ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(-9, -5, 18, 14, 3); ctx.fill();
+      ctx.fillStyle = '#2a0d22'; ctx.beginPath(); ctx.arc(0, 1, 2.5, 0, 7); ctx.fill(); ctx.restore();
+    };
+    const counter = (n: number, bg: string, fg: string) => (x: number, y: number): void => {
+      ctx.save(); ctx.font = '600 15px Fredoka, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(x, y, 11, 0, 7); ctx.fill();
+      ctx.fillStyle = fg; ctx.fillText(String(n), x, y + 1); ctx.restore();
+    };
+    if (r.fixed) draws.push((x, y) => {
       ctx.save(); ctx.translate(x, y); ctx.fillStyle = '#cfd3da'; ctx.strokeStyle = '#2a0d22'; ctx.lineWidth = 2;
       ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = (k * Math.PI) / 3; ctx.lineTo(Math.cos(a) * 11, Math.sin(a) * 11); } ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.arc(0, 0, 4, 0, 7); ctx.fillStyle = '#6b6f78'; ctx.fill(); ctx.restore();
-    }
-    if (r.lock && game.merges < 1) {
-      ctx.save(); ctx.translate(x, y + (r.fixed ? 22 : 0)); ctx.strokeStyle = '#e3c473'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(0, -5, 6, Math.PI, 0); ctx.stroke();
-      ctx.fillStyle = '#e3c473'; ctx.beginPath(); ctx.roundRect(-9, -5, 18, 14, 3); ctx.fill();
-      ctx.fillStyle = '#2a0d22'; ctx.beginPath(); ctx.arc(0, 1, 2.5, 0, 7); ctx.fill(); ctx.restore();
-    }
-    if (r.ice !== null) {
-      ctx.save(); ctx.font = '600 15px Fredoka, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(190,235,255,.9)'; ctx.beginPath(); ctx.arc(x, y - (r.lock ? 22 : 0), 11, 0, 7); ctx.fill();
-      ctx.fillStyle = '#123a52'; ctx.fillText(String(r.ice), x, y + 1 - (r.lock ? 22 : 0)); ctx.restore();
-    }
+    });
+    if (r.lock && game.merges < 1) draws.push(lock('#e3c473'));
+    if (r.clock && game.mergesBy[r.clock] < 1) draws.push(lock(COL[r.clock].c));
+    if (r.ice !== null) draws.push(counter(r.ice, 'rgba(190,235,255,.9)', '#123a52'));
+    const left = game.bombLeft(i);
+    if (left !== null) draws.push((x, y) => {
+      const hot = left <= 2, pulse = hot && !this.reduceMotion ? 1 + 0.12 * Math.sin(time * 10) : 1;
+      ctx.save(); ctx.translate(x, y); ctx.scale(pulse, pulse);
+      ctx.strokeStyle = '#8a6a24'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(6, -8); ctx.quadraticCurveTo(10, -16, 15, -14); ctx.stroke();
+      ctx.fillStyle = hot ? '#ffb347' : '#ffe08a'; ctx.beginPath(); ctx.arc(15, -14, 2.8 + (this.reduceMotion ? 0 : Math.sin(time * 18)), 0, 7); ctx.fill();
+      ctx.fillStyle = hot ? '#c81e3a' : '#1d1219'; ctx.beginPath(); ctx.arc(0, 0, 12, 0, 7); ctx.fill();
+      ctx.font = '600 15px Fredoka, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff'; ctx.fillText(String(left), 0, 1); ctx.restore();
+    });
+    if (r.heavy) draws.push((x, y) => {
+      ctx.save(); ctx.translate(x, y); ctx.fillStyle = '#5b4a54'; ctx.strokeStyle = '#2a0d22'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-7, -9); ctx.lineTo(7, -9); ctx.lineTo(11, 9); ctx.lineTo(-11, 9); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.font = '600 12px Fredoka, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#f3e6ee'; ctx.fillText('×2', 0, 1.5); ctx.restore();
+    });
+    const step = 24, top = r.y - ((draws.length - 1) * step) / 2;
+    draws.forEach((d, k) => d(r.x + dx, top + k * step));
   }
   private bead(x: number, y: number, c: Color, rad: number): void {
     const ctx = this.ctx, k = COL[c], s = rad * 0.45;
     ctx.save(); ctx.translate(x, y);
-    ctx.beginPath(); ctx.arc(0, 0, rad, 0, 7); ctx.fillStyle = k.c; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = '#f6dd94'; ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.beginPath();
-    if (k.s === 'heart') {
-      ctx.moveTo(0, s * 0.9); ctx.bezierCurveTo(-s * 1.6, -s * 0.2, -s * 0.6, -s * 1.3, 0, -s * 0.4);
-      ctx.bezierCurveTo(s * 0.6, -s * 1.3, s * 1.6, -s * 0.2, 0, s * 0.9);
-    } else if (k.s === 'diamond') {
-      ctx.moveTo(0, -s); ctx.lineTo(s * 0.8, 0); ctx.lineTo(0, s); ctx.lineTo(-s * 0.8, 0); ctx.closePath();
-    } else { ctx.moveTo(0, -s); ctx.lineTo(s, s * 0.8); ctx.lineTo(-s, s * 0.8); ctx.closePath(); }
-    ctx.fill();
-    ctx.beginPath(); ctx.arc(-rad * 0.35, -rad * 0.4, rad * 0.22, 0, 7); ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fill();
+    // soft drop shadow
+    ctx.beginPath(); ctx.ellipse(0, rad * 0.9, rad * 0.8, rad * 0.25, 0, 0, 7); ctx.fillStyle = 'rgba(10,0,8,.35)'; ctx.fill();
+    // gold rim
+    const rim = ctx.createLinearGradient(-rad, -rad, rad, rad);
+    rim.addColorStop(0, '#fff2c2'); rim.addColorStop(0.5, '#e3c473'); rim.addColorStop(1, '#8a6a24');
+    ctx.beginPath(); ctx.arc(0, 0, rad + 2, 0, 7); ctx.fillStyle = rim; ctx.fill();
+    // gem body: light top-left, deep bottom-right
+    const body = ctx.createRadialGradient(-rad * 0.35, -rad * 0.4, rad * 0.1, 0, 0, rad);
+    body.addColorStop(0, k.l); body.addColorStop(0.45, k.c); body.addColorStop(1, shade(k.c, -0.35));
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, 7); ctx.fillStyle = body; ctx.fill();
+    // facet ring
+    ctx.beginPath(); ctx.arc(0, 0, rad * 0.72, 0, 7); ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.2; ctx.stroke();
+    // symbol with a little depth
+    const symbol = (): void => {
+      ctx.beginPath();
+      if (k.s === 'heart') {
+        ctx.moveTo(0, s * 0.9); ctx.bezierCurveTo(-s * 1.6, -s * 0.2, -s * 0.6, -s * 1.3, 0, -s * 0.4);
+        ctx.bezierCurveTo(s * 0.6, -s * 1.3, s * 1.6, -s * 0.2, 0, s * 0.9);
+      } else if (k.s === 'diamond') {
+        ctx.moveTo(0, -s); ctx.lineTo(s * 0.8, 0); ctx.lineTo(0, s); ctx.lineTo(-s * 0.8, 0); ctx.closePath();
+      } else { ctx.moveTo(0, -s); ctx.lineTo(s, s * 0.8); ctx.lineTo(-s, s * 0.8); ctx.closePath(); }
+    };
+    ctx.save(); ctx.translate(0, 1.2); symbol(); ctx.fillStyle = shade(k.c, -0.45); ctx.fill(); ctx.restore();
+    symbol(); ctx.fillStyle = '#fff'; ctx.fill();
+    // glints
+    ctx.beginPath(); ctx.ellipse(-rad * 0.38, -rad * 0.42, rad * 0.26, rad * 0.16, -0.6, 0, 7); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(rad * 0.42, rad * 0.38, rad * 0.08, 0, 7); ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fill();
     ctx.restore();
   }
+
 }

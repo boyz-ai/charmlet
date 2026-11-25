@@ -3,6 +3,8 @@ export type Lang = 'tr' | 'en';
 export interface SaveData {
   /** index of the next level to play (0-based) */
   level: number;
+  /** how many levels have ever been finished (unlocks them on the map) */
+  best: number;
   streak: number;
   sound: boolean;
   vibration: boolean;
@@ -17,13 +19,24 @@ export interface SaveData {
   dailyStep: number;
   /** local day (YYYY-MM-DD) the daily reward was last claimed */
   dailyLast: string | null;
+  /** bought anything (no forced ads ever again) */
+  paid: boolean;
+  /** bought the No Ads pack */
+  noAds: boolean;
+  /** one-time products already bought */
+  owned: string[];
+  /** seconds played in total (no forced ads in the first minutes) */
+  playTime: number;
+  /** levels finished since the last forced ad */
+  levelsSinceAd: number;
 }
 
 export interface SaveService { load(): SaveData; save(d: SaveData): void }
 
 export const defaultSave = (lang: Lang): SaveData =>
-  ({ level: 0, streak: 0, sound: true, vibration: true, lang, seenHome: false,
-    coins: 0, boosters: { hint: 3, undo: 2, slot: 2, magnet: 2 }, dailyStep: 0, dailyLast: null });
+  ({ level: 0, best: 0, streak: 0, sound: true, vibration: true, lang, seenHome: false,
+    coins: 0, boosters: { hint: 3, undo: 2, slot: 2, magnet: 2 }, dailyStep: 0, dailyLast: null,
+    paid: false, noAds: false, owned: [], playTime: 0, levelsSinceAd: 0 });
 
 const nat = (v: unknown, d: number): number => (Number.isInteger(v) && (v as number) >= 0 ? (v as number) : d);
 
@@ -48,6 +61,7 @@ export class LocalSaveService implements SaveService {
         vibration: typeof d.vibration === 'boolean' ? d.vibration : base.vibration,
         lang: d.lang === 'tr' || d.lang === 'en' ? d.lang : base.lang,
         seenHome: d.seenHome === true,
+        best: nat(d.best, 0),
         coins: nat(d.coins, base.coins),
         boosters: {
           hint: nat(d.boosters?.hint, base.boosters.hint),
@@ -56,6 +70,11 @@ export class LocalSaveService implements SaveService {
           magnet: nat(d.boosters?.magnet, base.boosters.magnet),
         },
         dailyStep: nat(d.dailyStep, 0) % 7,
+        paid: d.paid === true,
+        noAds: d.noAds === true,
+        owned: Array.isArray(d.owned) ? d.owned.filter((x): x is string => typeof x === 'string') : [],
+        playTime: typeof d.playTime === 'number' && Number.isFinite(d.playTime) && d.playTime >= 0 ? d.playTime : 0,
+        levelsSinceAd: nat(d.levelsSinceAd, 0),
         dailyLast: typeof d.dailyLast === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d.dailyLast) ? d.dailyLast : null,
       };
     } catch { return base; }

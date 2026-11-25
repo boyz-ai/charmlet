@@ -30,7 +30,10 @@ const L6 = ['g23', 'zig6', 'tri6', 'hex6'], L9 = ['g33', 'ring9', 'zz9'];
 function build(spec) {
   const L = LAYOUTS[spec.layout];
   const rings = L.pts.map(([x, y], i) => ({ x, y, r: L.r, c: spec.colors[i], g: spec.gaps[i] * Math.PI / 180,
-    fixed: spec.fixed.includes(i), twin: spec.twin.includes(i), lock: spec.lock.includes(i), ice: spec.ice.includes(i) }));
+    fixed: spec.fixed.includes(i), twin: spec.twin.includes(i), lock: spec.lock.includes(i), ice: spec.ice.includes(i),
+    heavy: (spec.heavy ?? []).includes(i),
+    bomb: (spec.bomb ?? []).find(([k]) => k === i)?.[1] ?? 0,
+    clock: (spec.clock ?? []).find(([k]) => k === i)?.[1] ?? null }));
   const links = [];
   for (let i = 0; i < rings.length; i++) for (let j = i + 1; j < rings.length; j++) { const p = inter(rings[i], rings[j]); if (p) links.push({ a: i, b: j, p }); }
   return { rings, links, pins: spec.pins.map(([i, deg]) => ({ i, a: deg * Math.PI / 180 })) };
@@ -59,8 +62,14 @@ function solve(lv, limit, wantPath = false) {
       if (L.b === i && !(mask >> L.a & 1)) linkKeys[li][1].forEach(k => m |= 1 << k); });
     pinKeys.forEach(p => { if (p.i === i) m |= 1 << p.k; }); relCache.set(ck, m); return m; }
   const merges = (mask, tray) => { let rel = 0; for (let i = 0; i < n; i++) if (mask >> i & 1) rel++; return (rel - tray[0] - tray[1] - tray[2]) / MERGE; };
+  // merges of one color = (charms of that color released − charms of it still in the tray) / 3
+  const mergesOf = (mask, tray, c) => { let rel = 0; for (let i = 0; i < n; i++) if (mask >> i & 1 && rings[i].c === c) rel++; return (rel - tray[colIdx[c]]) / MERGE; };
+  const bombs = rings.map((r, i) => (r.bomb ? i : -1)).filter(i => i >= 0);
+  // a rotation that spends moves up to a bomb's countdown while that bomb is still on the board loses the level
+  const bombOk = (mask, spent) => bombs.every(i => (mask >> i & 1) || spent < rings[i].bomb);
   function free(gs, mask, tray, i) {
     if (rings[i].lock && merges(mask, tray) < 1) return false;
+    if (rings[i].clock && mergesOf(mask, tray, rings[i].clock) < 1) return false;
     for (const p of pinKeys) if (p.i === i && !(gs[i] >> p.k & 1)) return false;
     for (let li = 0; li < links.length; li++) { const L = links[li]; if (L.a !== i && L.b !== i) continue;
       const o = L.a === i ? L.b : L.a; if (mask >> o & 1) continue;
@@ -70,8 +79,11 @@ function solve(lv, limit, wantPath = false) {
     for (let i = 0; i < n; i++) k += ',' + ((s.mask >> i & 1) ? 'x' : (s.gs[i] & relMask(i, s.mask))); return k; };
   const start = { gs: init, mask: 0, tray: [0, 0, 0], ice: iceIdx.map(() => 0) };
   const dist = new Map([[key(start), 0]]), parent = new Map();
-  let dq = [start], dq2 = [], d = 0, seen = 0;
-  while (dq.length) {
+  // bucket queue: releases cost 0, rotations cost 1 (heavy rings 2)
+  const buckets = [[start]];
+  let d = 0, seen = 0;
+  for (; d < buckets.length; d++) {
+    const dq = buckets[d] ?? [];
     while (dq.length) { const s = dq.pop(); if (dist.get(key(s)) < d) continue; seen++;
       if (dist.size > limit) return null;
       if (s.mask === (1 << n) - 1 && s.tray.every(x => x === 0)) {
@@ -87,17 +99,19 @@ function solve(lv, limit, wantPath = false) {
         if (!dist.has(nk) || dist.get(nk) > d) { dist.set(nk, d); dq.push(ns); if (wantPath) parent.set(nk, [sk, [i, null]]); } }
       for (let i = 0; i < n; i++) { if (s.mask >> i & 1) continue;
         const ii = iceIdx.indexOf(i); if (ii >= 0 && s.ice[ii] >= 2) continue;
+        const cost = rings[i].heavy ? 2 : 1, nd = d + cost;
+        if (!bombOk(s.mask, nd)) continue;
         const rm = relMask(i, s.mask);
         for (const { sig: sg, angle } of opts[i]) { if ((sg & rm) === (s.gs[i] & rm)) continue;
           const gs = s.gs.slice(); gs[i] = sg; const ice = ii >= 0 ? s.ice.map((v, k) => k === ii ? v + 1 : v) : s.ice;
           const ns = { gs, mask: s.mask, tray: s.tray, ice }, nk = key(ns);
-          if (!dist.has(nk) || dist.get(nk) > d + 1) { dist.set(nk, d + 1); dq2.push(ns); if (wantPath) parent.set(nk, [sk, [i, Math.round(angle * 180 / Math.PI * 100) / 100]]); } } } }
-    dq = dq2; dq2 = []; d++; }
+          if (!dist.has(nk) || dist.get(nk) > nd) { dist.set(nk, nd); (buckets[nd] ??= []).push(ns); if (wantPath) parent.set(nk, [sk, [i, Math.round(angle * 180 / Math.PI * 100) / 100]]); } } } }
+  }
   return { moves: Infinity, states: seen };
 }
 
-const MECHS = ['pin', 'fixed', 'twin', 'lock', 'ice'];
-const MECH_START = { pin: 3, fixed: 11, twin: 21, lock: 31, ice: 41 };
+const MECHS = ['pin', 'fixed', 'twin', 'lock', 'ice', 'bomb', 'clock', 'heavy'];
+const MECH_START = { pin: 3, fixed: 11, twin: 21, lock: 31, ice: 41, bomb: 101, clock: 201, heavy: 301 };
 function randomSpec(layout, ncol, mech) {
   const L = LAYOUTS[layout], n = L.pts.length, per = n / ncol;
   const colors = shuffle([].concat(...['r', 'b', 'g'].slice(0, ncol).map(c => Array(per).fill(c))));
@@ -106,7 +120,13 @@ function randomSpec(layout, ncol, mech) {
   const free = shuffle([...Array(n).keys()]);
   for (const [m, count] of Object.entries(mech)) for (let k = 0; k < count && free.length; k++) {
     const i = free.pop();
-    if (m === 'pin') spec.pins.push([i, Math.round(rnd() * 23) * 15]); else spec[m].push(i);
+    if (m === 'pin') spec.pins.push([i, Math.round(rnd() * 23) * 15]);
+    else if (m === 'bomb') (spec.bomb ??= []).push([i, 3 + Math.floor(rnd() * 5)]); // countdown 3–7 moves
+    else if (m === 'clock') { // opens after a merge of another color that is on the board
+      const others = [...new Set(colors)].filter(c => c !== colors[i]);
+      (spec.clock ??= []).push([i, others.length ? others[Math.floor(rnd() * others.length)] : colors[i]]);
+    }
+    else (spec[m] ??= []).push(i);
   }
   return spec;
 }
@@ -115,7 +135,7 @@ const pick = a => a[Math.floor(rnd() * a.length)];
 // Role inside a 10-level arc (position 1..10).
 const ARC = { 1: 'intro', 2: 'normal', 3: 'normal', 4: 'normal', 5: 'hard', 6: 'relief', 7: 'normal', 8: 'normal', 9: 'super', 10: 'bonus' };
 const SLACK = { tut: 4, intro: 3, normal: 2, hard: 1, relief: 3, super: 0, bonus: 4 };
-function planFor(n) { // n = level number 1..100
+function planFor(n) { // n = level number 1..1000
   if (n === 1) return { role: 'tut1', layout: 'row3', ncol: 1, mech: {}, range: [2, 2], slack: SLACK.tut };
   if (n === 2) return { role: 'tut2', layout: 'g23', ncol: 2, mech: {}, range: [3, 4], slack: SLACK.tut };
   const pos = ((n - 1) % 10) + 1, arc = Math.floor((n - 1) / 10);
@@ -125,7 +145,11 @@ function planFor(n) { // n = level number 1..100
   if (newMech) { role = 'new_' + newMech; mech = { [newMech]: 1 }; }
   else if (role === 'intro') role = 'normal';
   const extra = role === 'relief' || role === 'bonus' ? 0 : Math.min(3, 1 + Math.floor(arc / 3));
-  if (!newMech && avail.length) for (let k = 0; k < extra; k++) { const m = pick(avail); mech[m] = (mech[m] || 0) + 1; }
+  // after level 100 the newer ring types (bomb, color lock, heavy) show up in most levels
+  const fresh = avail.filter(m => MECH_START[m] > 100);
+  if (!newMech && extra > 0 && fresh.length && rnd() < 0.7) { const m = pick(fresh); mech[m] = 1; }
+  const done = Object.keys(mech).length;
+  if (!newMech && avail.length) for (let k = done; k < extra; k++) { const m = pick(avail); mech[m] = (mech[m] || 0) + 1; }
   const big = role === 'hard' || role === 'super' || (role === 'normal' && arc >= 2 && rnd() < 0.5);
   const layout = big ? pick(L9) : pick(L6);
   const ncol = big ? 3 : 2;
