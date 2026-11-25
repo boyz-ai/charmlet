@@ -21,6 +21,7 @@ export async function startAnalytics(): Promise<void> {
       disable_surveys: true,
       persistence: 'localStorage',
       person_profiles: 'always',
+      ip: false, // never send the IP address
     });
     client = posthog as unknown as Client;
     for (const [e, p] of queue.splice(0)) client.capture(e, p);
