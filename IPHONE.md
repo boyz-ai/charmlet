@@ -24,7 +24,7 @@ Ad: `Codemagic`, Erişim: **App Manager** → Oluştur. Sayfadaki **Issuer ID** 
 3. Team settings → **Code signing identities** → iOS certificates → **Generate certificate** (App Store) →
    iOS provisioning profiles → **Fetch profiles** → `com.mucahitkurkaya.charmlet` App Store profili.
 4. Depodaki `codemagic.yaml` içinde `APP_STORE_APPLE_ID: 0` yerine 2. adımdaki numarayı,
-   `KULLANICI_ADI` yerine GitHub kullanıcı adını yaz (Antigravity'ye yaptırabilirsin), GitHub'a gönder.
+   GitHub: boyz-ai/charmlet — paket adresi https://boyz-ai.github.io/charmlet/packs/ (codemagic.yaml içinde hazır).
 5. Codemagic'te **Start new build** → workflow: *iPhone → TestFlight*. ~15 dakika sürer.
 
 ## 5. TestFlight

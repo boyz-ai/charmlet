@@ -28,9 +28,9 @@ Oyunda 1000 bölüm hazır geliyor. Her pazartesi GitHub kendiliğinden 50 yeni 
 1. github.com'da hesap aç ve **charm** adında bir depo (repository) oluştur.
 2. Antigravity'ye: "Bu projeyi GitHub'daki charm depoma gönder (git remote add origin … ; git push -u origin main)".
 3. GitHub'da depo → Settings → Pages → Source: **GitHub Actions** seç.
-4. Actions sekmesinde "Publish site" çalışınca site açılır: https://KULLANICI_ADIN.github.io/charm/
-   - Gizlilik sayfası: https://KULLANICI_ADIN.github.io/charm/privacy.html (mağaza bu adresi ister)
-   - Bölüm paketleri: https://KULLANICI_ADIN.github.io/charm/packs/
-5. Telefon uygulamasını derlerken VITE_PACKS_URL=https://KULLANICI_ADIN.github.io/charm/packs/ verilir (M6'da Claude ayarlar).
+4. Actions sekmesinde "Publish site" çalışınca site açılır: https://boyz-ai.github.io/charmlet/
+   - Gizlilik sayfası: https://boyz-ai.github.io/charmlet/privacy.html (mağaza bu adresi ister)
+   - Bölüm paketleri: https://boyz-ai.github.io/charmlet/packs/
+5. Telefon uygulamasını derlerken VITE_PACKS_URL=https://boyz-ai.github.io/charmlet/packs/ verilir (M6'da Claude ayarlar).
 6. Elle ek paket: Actions → "Weekly level pack" → Run workflow.
 7. Destek e-postası: boyz.destek@gmail.com (public/privacy.html içinde).
