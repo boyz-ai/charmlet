@@ -33,4 +33,4 @@ Oyunda 1000 bölüm hazır geliyor. Her pazartesi GitHub kendiliğinden 50 yeni 
    - Bölüm paketleri: https://KULLANICI_ADIN.github.io/charm/packs/
 5. Telefon uygulamasını derlerken VITE_PACKS_URL=https://KULLANICI_ADIN.github.io/charm/packs/ verilir (M6'da Claude ayarlar).
 6. Elle ek paket: Actions → "Weekly level pack" → Run workflow.
-7. public/privacy.html içindeki SUPPORT_EMAIL yerine kendi destek e-postanı yaz.
+7. Destek e-postası: boyz.destek@gmail.com (public/privacy.html içinde).
