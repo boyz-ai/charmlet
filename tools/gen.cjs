@@ -111,7 +111,9 @@ function solve(lv, limit, wantPath = false) {
 }
 
 const MECHS = ['pin', 'fixed', 'twin', 'lock', 'ice', 'bomb', 'clock', 'heavy'];
-const MECH_START = { pin: 3, fixed: 11, twin: 21, lock: 31, ice: 41, bomb: 101, clock: 201, heavy: 301 };
+// v3 schedule: a new ring type about every 7 levels, so all 8 are met by level 48 (was 3/11/21/31/41/101/201/301)
+const MECH_START = { pin: 3, fixed: 8, twin: 14, lock: 21, ice: 27, bomb: 34, clock: 41, heavy: 48 };
+const LATE = ['bomb', 'clock', 'heavy']; // the newest types; after level 100 most levels use one of them
 function randomSpec(layout, ncol, mech) {
   const L = LAYOUTS[layout], n = L.pts.length, per = n / ncol;
   const colors = shuffle([].concat(...['r', 'b', 'g'].slice(0, ncol).map(c => Array(per).fill(c))));
@@ -146,7 +148,7 @@ function planFor(n) { // n = level number 1..1000
   else if (role === 'intro') role = 'normal';
   const extra = role === 'relief' || role === 'bonus' ? 0 : Math.min(3, 1 + Math.floor(arc / 3));
   // after level 100 the newer ring types (bomb, color lock, heavy) show up in most levels
-  const fresh = avail.filter(m => MECH_START[m] > 100);
+  const fresh = n > 100 ? avail.filter(m => LATE.includes(m)) : [];
   if (!newMech && extra > 0 && fresh.length && rnd() < 0.7) { const m = pick(fresh); mech[m] = 1; }
   const done = Object.keys(mech).length;
   if (!newMech && avail.length) for (let k = done; k < extra; k++) { const m = pick(avail); mech[m] = (mech[m] || 0) + 1; }

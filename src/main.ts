@@ -97,8 +97,19 @@ function toast(msg: string): void {
 function setLanguage(l: Lang): void { save.lang = l; setLang(l); persist(); applyTexts(); }
 
 // ---------- game ----------
+/** Each chapter of 50 levels has its own page tint (light and dark variants), so progress is visible. */
+const CHAPTER_TINTS: [string, string][] = [
+  ['#f4ece4', '#160d14'], ['#e8eef8', '#0d1220'], ['#e6f2e8', '#0b1a12'], ['#f8efe0', '#1c140a'],
+  ['#f9e8ee', '#1f0c15'], ['#e2f3f2', '#081a1b'], ['#eee8f8', '#150d24'], ['#f8e6e0', '#200e0a'],
+];
+function chapterTint(n: number): void {
+  const [l, d] = CHAPTER_TINTS[Math.floor(n / 50) % CHAPTER_TINTS.length];
+  document.documentElement.style.setProperty('--bg', `light-dark(${l},${d})`);
+}
+
 function load(n: number, keepFail = false, isReplay = false): void {
   level = n;
+  chapterTint(n);
   if (!keepFail) replay = isReplay;
   if (!keepFail) { failedOnce = false; fails = 0; }
   const spec = LEVELS[n];

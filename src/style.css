@@ -6,7 +6,7 @@
 :root{color-scheme:light dark;--bg:light-dark(#f4ece4,#160d14);--ink:light-dark(#2a1426,#f3e6ee);--muted:light-dark(#6d5266,#bfa7b7);--gold:#c9a24a}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Fredoka,system-ui,sans-serif;overflow-x:clip;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);transition:background-color .6s;color:var(--ink);font:16px/1.5 Fredoka,system-ui,sans-serif;overflow-x:clip;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 .wrap{max-width:480px;margin:0 auto;padding:16px 14px 28px}
 header{display:flex;align-items:center;gap:10px;justify-content:space-between}
 h1{font-size:26px;line-height:1.1;margin:0;font-weight:600}
