@@ -5,3 +5,9 @@ export const ADMOB = {
   rewarded: 'ca-app-pub-8149158472131789/9011561447',
   interstitial: 'ca-app-pub-8149158472131789/9163478370',
 };
+
+// Analytics (PostHog). Empty key = analytics off. The project key is public by design (it can only send events).
+export const ANALYTICS = {
+  key: '',
+  host: 'https://eu.i.posthog.com', // EU servers
+};

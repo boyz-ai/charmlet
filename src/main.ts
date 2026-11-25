@@ -6,6 +6,8 @@ import { Renderer } from './render/renderer';
 import { HomeScene } from './render/home';
 import { isNative, mirrorSave, nativeChrome, nativeHaptics, restoreSave } from './native/native';
 import { AdMobAds } from './native/admob';
+import { maybeAskReview } from './native/review';
+import { startAnalytics, track } from './services/analytics';
 import { ADMOB } from './config';
 import { attachInput } from './input/input';
 import { FeedbackManager } from './feedback/feedback';
@@ -26,6 +28,7 @@ const fb = new FeedbackManager();
 const renderer = new Renderer(cv);
 const homeScene = new HomeScene($<HTMLCanvasElement>('homeCv'));
 await restoreSave(); // phone app: bring back the save if iOS cleared the web storage
+void startAnalytics();
 const store = new LocalSaveService();
 const save: SaveData = store.load();
 const persist = (): void => { store.save(save); mirrorSave(); };
@@ -46,6 +49,12 @@ const admob = isNative() ? new AdMobAds() : null;
 const ads: AdService = admob ?? new TestAds(dialog);
 /** Real store purchases arrive with M7; until then the phone app shows the shop as "coming soon". */
 const IAP_READY = !isNative();
+/** Rewarded ad + analytics: was it offered and actually shown? */
+async function rewarded(place: 'double' | 'continue'): Promise<boolean> {
+  const ok = await ads.showRewarded(place);
+  track('ad_rewarded', { place, shown: ok, level: level + 1 });
+  return ok;
+}
 /** While test ads are on, say why no ad came (to fix setup problems); players of the store build only see the friendly text. */
 const noAdToast = (): void => toast(t('noAd') + (ADMOB.testing && admob?.lastError ? ` [${admob.lastError}]` : ''));
 if (isNative()) document.getElementById('testNote')?.remove(); // the web test note does not apply to the phone app
@@ -113,6 +122,7 @@ function load(n: number, keepFail = false, isReplay = false): void {
   if (!keepFail) replay = isReplay;
   if (!keepFail) { failedOnce = false; fails = 0; }
   const spec = LEVELS[n];
+  track('level_start', { level: n + 1, role: spec.role, retry: keepFail, replay });
   game = new Game(spec, LAYOUTS[spec.layout]);
   renderer.reset();
   game.on(e => {
@@ -156,6 +166,7 @@ function onWin(): void {
     return;
   }
   if (!failedOnce) save.streak++;
+  track('level_win', { level: level + 1, role: LEVELS[level].role, fails, streak: save.streak });
   const coins = winCoins(LEVELS[level].role);
   save.coins += coins;
   const last = level === LEVELS.length - 1;
@@ -171,13 +182,15 @@ function onWin(): void {
   const text = t('winCoins', { n: coins }) + (failedOnce ? '' : t('winStreak', { n: save.streak })) + (last ? t('winLast') : t('winNext'));
   // a forced ad may come after this win → then no 2× offer (GDD: never an ad right after declining 2×)
   const adNext = interstitialDue(save, performance.now() / 1000, lastAdS, false);
+  const won = level + 1, streakNow = save.streak;
+  if (!adNext) setTimeout(() => void maybeAskReview(won, streakNow), 1500); // never right before a forced ad
   const next = async (): Promise<void> => {
-    if (adNext) { await ads.showInterstitial(); lastAdS = performance.now() / 1000; save.levelsSinceAd = 0; persist(); }
+    if (adNext) { track('ad_interstitial', { level: level + 1 }); await ads.showInterstitial(); lastAdS = performance.now() / 1000; save.levelsSinceAd = 0; persist(); }
     playNext();
   };
   if (adNext) show(t('winTitle'), text, last ? t('again') : t('next'), () => void next());
   else show(t('winTitle'), text, last ? t('again') : t('next'), () => playNext(), t('doubleCoins', { n: coins }), async () => {
-    if (await ads.showRewarded('double')) { save.coins += coins; persist(); hud(); toast(t('doubled')); } else if (isNative()) noAdToast();
+    if (await rewarded('double')) { save.coins += coins; persist(); hud(); toast(t('doubled')); } else if (isNative()) noAdToast();
     playNext();
   });
 }
@@ -186,6 +199,7 @@ function onLose(reason: 'tray' | 'moves' | 'bomb'): void {
   fb.lose();
   failedOnce = true;
   fails++;
+  track('level_lose', { level: level + 1, role: LEVELS[level].role, reason, fails });
   const retry = (): void => { if (!replay) { save.streak = 0; persist(); } load(level, true); };
   const burn = save.streak > 0 && !replay ? t('streakBurn', { n: save.streak }) : '';
   if (reason === 'bomb') {
@@ -199,7 +213,7 @@ function onLose(reason: 'tray' | 'moves' | 'bomb'): void {
     const left = game.rings.filter(r => !r.gone).length;
     const cont = (): void => { game.addMoves(CONTINUE_MOVES); hideOverlay(); hud(); };
     // coins first; without coins a rewarded ad will go here (M7) — for now a free test button
-    const watch = async (): Promise<void> => { if (await ads.showRewarded('continue')) cont(); else if (isNative()) noAdToast(); };
+    const watch = async (): Promise<void> => { if (await rewarded('continue')) cont(); else if (isNative()) noAdToast(); };
     if (save.coins >= CONTINUE_PRICE)
       show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('watchMoves'), () => void watch(),
         t('continueCoins', { n: CONTINUE_MOVES, p: CONTINUE_PRICE }), () => { if (buyContinue(save)) { persist(); cont(); } }, t('retry'), retry);
@@ -263,9 +277,11 @@ function closeShop(): void { $('shop').classList.remove('on'); hud(); homeTexts(
 $('shopList').addEventListener('click', async e => {
   const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-p]');
   const p = PRODUCTS.find(x => x.id === btn?.dataset.p);
-  if (!p || !canBuy(save, p) || !IAP_READY) return;
+  if (!p) return;
+  track('shop_tap', { product: p.id, ready: IAP_READY });
+  if (!canBuy(save, p) || !IAP_READY) return;
   fb.unlock();
-  if (await iap.buy(p)) { grant(save, p); persist(); fb.win(); toast(t('bought')); openShop(); }
+  if (await iap.buy(p)) { track('purchase', { product: p.id }); grant(save, p); persist(); fb.win(); toast(t('bought')); openShop(); }
 });
 
 // ---------- level map ----------
@@ -372,6 +388,7 @@ function useBooster(b: Booster): void {
   if (b === 'hint') { renderer.hint = game.suggest(); ok = renderer.hint !== null; idle = 0; }
   else ok = b === 'undo' ? game.undo() : b === 'slot' ? game.addSlot() : game.magnet();
   if (!ok) refundBooster(save, b, how);
+  else track('booster', { kind: b, how: String(how), level: level + 1 });
   persist();
   if (game.state === 'play') hideOverlay();
   hud();
@@ -433,6 +450,7 @@ applyLook();
 // phone app: real haptics, status bar, splash, then the ad consent flow (EU form → iOS tracking prompt)
 void nativeHaptics().then(h => { if (h) fb.haptics = h; });
 void nativeChrome();
+track('app_open', { level: save.level + 1, lang: save.lang, app: isNative() });
 if (admob) void admob.start().then(async () => { if (await admob.privacyOptionsRequired()) $('privacyOpts').style.display = ''; });
 // new weekly levels: download in the background, add them when they are verified
 void fetchNewPacks(LEVELS.length).then(p => {
