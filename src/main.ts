@@ -45,6 +45,7 @@ const admob = isNative() ? new AdMobAds() : null;
 const ads: AdService = admob ?? new TestAds(dialog);
 /** Real store purchases arrive with M7; until then the phone app shows the shop as "coming soon". */
 const IAP_READY = !isNative();
+if (isNative()) document.getElementById('testNote')?.remove(); // the web test note does not apply to the phone app
 const iap: IAPService = new TestIAP(dialog, t);
 let lastAdS = -1e9;
 const resetIdle = (): void => { idle = 0; renderer.hint = null; };

@@ -180,3 +180,8 @@ header h1{font-size:clamp(19px,5.6vw,24px)}
 /* phone app: keep clear of the notch and the home bar */
 .wrap{padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(28px,env(safe-area-inset-bottom))}
 .ov.home{padding-bottom:max(28px,env(safe-area-inset-bottom))}
+
+/* phone app: no pinch/double-tap zoom, and every full-screen sheet keeps clear of the notch and the home bar */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{touch-action:manipulation}
+.ov.sheet,.ov.sheet#shop,.ov.sheet#work,.ov.sheet#map{padding-top:max(22px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom));padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
