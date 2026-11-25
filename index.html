@@ -24,26 +24,32 @@
     <div class="ov" id="ov"><h2 id="ot"></h2><p id="op"></p><button id="ob"></button><button id="ob2" class="ghost"></button><button id="ob3" class="ghost"></button></div>
 
     <section class="ov home" id="home">
-      <div class="logo" aria-hidden="true"><span></span><span></span><span></span></div>
-      <h2 data-i18n="title">Charm Çözücü</h2>
+      <canvas class="homecv" id="homeCv" aria-hidden="true"></canvas>
+      <div class="hspace" aria-hidden="true"></div>
+      <h2 class="htitle" data-i18n="title">Charm Çözücü</h2>
       <p data-i18n="tagline"></p>
       <button id="playBtn" class="big"></button>
       <p class="small" id="homeStreak"></p>
       <p class="small"><span class="coin" aria-hidden="true"></span> <b id="homeCoins">0</b> <span data-i18n="coins">Altın</span></p>
       <div class="hgrid">
-        <button id="dailyBtn" class="ghost" data-i18n="daily">Günlük ödül</button>
-        <button id="shopBtn" class="ghost" data-i18n="shop">Mağaza</button>
-        <button id="mapBtn" class="ghost" data-i18n="map">Harita</button>
-        <button id="homeSet" class="ghost" data-i18n="settings">Ayarlar</button>
+        <button id="workBtn" class="ghost"><span aria-hidden="true">💍</span><span data-i18n="workshop">Atölye</span></button>
+        <button id="shopBtn" class="ghost"><span aria-hidden="true">🛍️</span><span data-i18n="shop">Mağaza</span></button>
+        <button id="mapBtn" class="ghost"><span aria-hidden="true">🗺️</span><span data-i18n="map">Harita</span></button>
+        <button id="homeSet" class="ghost"><span aria-hidden="true">⚙️</span><span data-i18n="settings">Ayarlar</span></button>
       </div>
     </section>
 
-    <section class="ov sheet" id="daily" role="dialog" aria-modal="true" aria-labelledby="dailyTitle">
-      <h2 id="dailyTitle" data-i18n="daily">Günlük ödül</h2>
-      <p data-i18n="dailyText"></p>
-      <ol class="days" id="days"></ol>
-      <button id="dailyClaim" class="big"></button>
-      <button id="dailyClose" class="ghost" data-i18n="close">Kapat</button>
+    <section class="ov sheet" id="work" role="dialog" aria-modal="true" aria-labelledby="workTitle">
+      <h2 id="workTitle" data-i18n="workshop">Atölye</h2>
+      <p class="small"><span class="coin" aria-hidden="true"></span> <b id="workCoins">0</b></p>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="ring" data-i18n="tab.ring">Halkalar</button>
+        <button role="tab" data-tab="charm" data-i18n="tab.charm">Charm'lar</button>
+        <button role="tab" data-tab="board" data-i18n="tab.board">Tahtalar</button>
+        <button role="tab" data-tab="col" data-i18n="tab.col">Koleksiyon</button>
+      </div>
+      <div class="witems" id="witems"></div>
+      <button id="workClose" class="ghost" data-i18n="close">Kapat</button>
     </section>
 
     <section class="ov sheet" id="map" role="dialog" aria-modal="true" aria-labelledby="mapTitle">
@@ -70,7 +76,7 @@
       <label class="row"><span data-i18n="sound">Ses</span><input type="checkbox" id="optSound"></label>
       <label class="row"><span data-i18n="vibration">Titreşim</span><input type="checkbox" id="optVib"></label>
       <div class="row"><span data-i18n="language">Dil</span>
-        <div class="seg"><button id="langTr" type="button">TR</button><button id="langEn" type="button">EN</button></div>
+        <select id="langSel" class="lsel" data-i18n-aria="language" aria-label="Dil"></select>
       </div>
       <button id="setClose" data-i18n="close">Kapat</button>
     </section>

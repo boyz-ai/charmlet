@@ -1,21 +1,24 @@
 import './style.css';
 import { Game } from './core/game';
 import { Renderer } from './render/renderer';
+import { HomeScene } from './render/home';
 import { attachInput } from './input/input';
 import { FeedbackManager } from './feedback/feedback';
 import { LAYOUTS, LEVELS } from './levels/levels';
-import { LocalSaveService, type Lang, type SaveData } from './services/save';
+import { LANGS, LANG_NAMES, LocalSaveService, type Lang, type SaveData } from './services/save';
 import { setLang, t } from './i18n';
 import {
-  BOOSTERS, BOOSTER_PRICE, CONTINUE_MOVES, CONTINUE_PRICE, DAILY, buyContinue, claimDaily, dailyAvailable, dayKey,
+  BOOSTERS, BOOSTER_PRICE, CONTINUE_MOVES, CONTINUE_PRICE, buyContinue, claimDaily, dayKey,
   refundBooster, spendBooster, streakBonus, winCoins, autoHint, HINT_NUDGE_FAILS, type Booster,
 } from './meta/meta';
+import { CHAPTER_REWARD, COLLECTION, COSMETICS, buyOrWear, collected, ownsCos, type CosKind } from './meta/workshop';
 import { PRODUCTS, TestAds, TestDialog, TestIAP, canBuy, grant, interstitialDue, type AdService, type IAPService } from './services/monetize';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
 const cv = $<HTMLCanvasElement>('c');
 const fb = new FeedbackManager();
 const renderer = new Renderer(cv);
+const homeScene = new HomeScene($<HTMLCanvasElement>('homeCv'));
 const store = new LocalSaveService();
 const save: SaveData = store.load();
 const persist = (): void => store.save(save);
@@ -44,8 +47,7 @@ function applyTexts(): void {
   document.querySelectorAll<HTMLElement>('[data-i18n]').forEach(el => (el.textContent = t(el.dataset.i18n!)));
   document.querySelectorAll<HTMLElement>('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', t(el.dataset.i18nAria!)));
   document.title = t('title');
-  $('langTr').setAttribute('aria-pressed', String(save.lang === 'tr'));
-  $('langEn').setAttribute('aria-pressed', String(save.lang === 'en'));
+  $<HTMLSelectElement>('langSel').value = save.lang;
   if (game) levelTexts();
   homeTexts();
   boosterTexts();
@@ -59,7 +61,6 @@ function homeTexts(): void {
   $('playBtn').textContent = `${t('play')} · ${t('playLevel', { n: save.level + 1 })}`;
   $('homeStreak').textContent = save.streak > 0 ? t('streakNow', { n: save.streak }) : '';
   $('homeCoins').textContent = String(save.coins);
-  $('dailyBtn').classList.toggle('glow', dailyAvailable(save, dayKey(new Date())) !== null);
 }
 function boosterTexts(): void {
   for (const b of BOOSTERS) {
@@ -132,11 +133,15 @@ function onWin(): void {
   const coins = winCoins(LEVELS[level].role);
   save.coins += coins;
   const last = level === LEVELS.length - 1;
+  const before = collected(save.best);
   save.best = Math.max(save.best, level + 1);
+  const gotNew = collected(save.best) > before;
+  if (gotNew) save.coins += CHAPTER_REWARD;
   save.level = last ? 0 : level + 1;
   save.levelsSinceAd++;
   persist();
   hud();
+  if (gotNew) toast(t('newCollect', { e: COLLECTION[collected(save.best) - 1], c: CHAPTER_REWARD }));
   const text = t('winCoins', { n: coins }) + (failedOnce ? '' : t('winStreak', { n: save.streak })) + (last ? t('winLast') : t('winNext'));
   // a forced ad may come after this win → then no 2× offer (GDD: never an ad right after declining 2×)
   const adNext = interstitialDue(save, performance.now() / 1000, lastAdS, false);
@@ -190,8 +195,8 @@ function show(title: string, text: string, b1: string, f1: () => void, b2?: stri
 }
 function hideOverlay(): void { $('ov').classList.remove('on'); }
 
-function openHome(): void { homeTexts(); $('home').classList.add('on'); $('playBtn').focus(); boosterTexts(); }
-function closeHome(): void { $('home').classList.remove('on'); boosterTexts(); if (bonusMsg) { toast(bonusMsg); bonusMsg = ''; } }
+function openHome(): void { homeTexts(); $('home').classList.add('on'); homeScene.start(); $('playBtn').focus(); boosterTexts(); }
+function closeHome(): void { $('home').classList.remove('on'); homeScene.stop(); boosterTexts(); if (bonusMsg) { toast(bonusMsg); bonusMsg = ''; } }
 function openSettings(): void {
   $<HTMLInputElement>('optSound').checked = save.sound;
   $<HTMLInputElement>('optVib').checked = save.vibration;
@@ -251,36 +256,63 @@ function openMap(ch = Math.floor(save.level / CHAPTER)): void {
 }
 function closeMap(): void { $('map').classList.remove('on'); boosterTexts(); }
 
-// ---------- daily reward ----------
-const rewardText = (i: number): string => {
-  const r = DAILY[i];
-  const icons: Record<Booster, string> = { hint: '💡', undo: '↶', slot: '⊕', magnet: '🧲' };
-  return `${r.coins}` + Object.keys(r.boosters ?? {}).map(b => ' ' + icons[b as Booster]).join('');
-};
-function openDaily(): void {
-  const today = dayKey(new Date()), avail = dailyAvailable(save, today);
-  const cur = avail ?? (save.dailyStep + DAILY.length - 1) % DAILY.length;
-  $('days').innerHTML = DAILY.map((_, i) =>
-    `<li class="${i < cur || (avail === null && i === cur) ? 'done' : ''}${i === cur && avail !== null ? ' today' : ''}${i === DAILY.length - 1 ? ' big' : ''}">` +
-    `<span>${t('day', { n: i + 1 })}</span><b><span class="coin" aria-hidden="true"></span> ${rewardText(i)}</b></li>`).join('');
-  const btn = $<HTMLButtonElement>('dailyClaim');
-  btn.textContent = avail === null ? t('dailyDone') : t('claim');
-  btn.disabled = avail === null;
-  $('daily').classList.add('on');
-  (avail === null ? $('dailyClose') : btn).focus();
-}
-function closeDaily(): void { $('daily').classList.remove('on'); homeTexts(); boosterTexts(); }
-function claimToday(): void {
+// ---------- daily gift (automatic, no extra screen) ----------
+function dailyGift(): void {
   const r = claimDaily(save, dayKey(new Date()));
   if (!r) return;
-  persist();
-  fb.merge();
-  toast(t('claimed', { n: r.coins }));
-  hud(); homeTexts(); openDaily();
+  persist(); hud(); homeTexts();
+  toast(t('dailyGift', { n: r.coins }));
 }
 
+// ---------- Bracelet Workshop ----------
+const BOARD_SWATCH: Record<string, string> = {
+  'board.velvet': 'radial-gradient(circle at 50% 35%,#6e2b5e,#33102c 72%)',
+  'board.night': 'radial-gradient(circle at 50% 35%,#2b3f7d,#0b1029 72%)',
+  'board.emerald': 'radial-gradient(circle at 50% 35%,#2a7a63,#0c2a22 72%)',
+  'board.ocean': 'radial-gradient(circle at 50% 35%,#2a7799,#0b2433 72%)',
+  'board.rose': 'radial-gradient(circle at 50% 35%,#a5566f,#3a1426 72%)',
+};
+let workTab: CosKind | 'col' = 'ring';
+function applyLook(): void {
+  renderer.look = { ring: save.cos.ring, charm: save.cos.charm };
+  cv.style.background = BOARD_SWATCH[save.cos.board] ?? BOARD_SWATCH['board.velvet'];
+}
+function openWork(tab: CosKind | 'col' = workTab): void {
+  workTab = tab;
+  $('workCoins').textContent = String(save.coins);
+  document.querySelectorAll<HTMLButtonElement>('#work .tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+  const box = $('witems');
+  if (tab === 'col') {
+    const n = collected(Math.max(save.best, save.level));
+    box.innerHTML = `<p class="small">${t('colText', { n, total: COLLECTION.length, c: CHAPTER_REWARD })}</p><div class="bracelet">` +
+      COLLECTION.map((e, i) => `<span class="${i < n ? 'got' : ''}" title="${t('chapter', { n: i + 1 })}">${i < n ? e : '?'}</span>`).join('') + '</div>';
+  } else {
+    box.innerHTML = '<div class="wgrid">' + COSMETICS.filter(c => c.kind === tab).map(c => {
+      const worn = save.cos[c.kind] === c.id, own = ownsCos(save, c.id);
+      const pv = c.kind === 'board' ? `<div class="pv" style="background:${BOARD_SWATCH[c.id]}"></div>` : `<canvas class="pv" data-pv="${c.id}"></canvas>`;
+      const label = worn ? t('worn') : own ? t('wear') : `<span class="coin" aria-hidden="true"></span> ${c.price}`;
+      return `<div class="witem${worn ? ' worn' : ''}">${pv}<b>${t('cos.' + c.id)}</b><button data-cos="${c.id}" ${worn ? 'disabled' : ''}>${label}</button></div>`;
+    }).join('') + '</div>';
+    box.querySelectorAll<HTMLCanvasElement>('canvas[data-pv]').forEach(pc => renderer.preview(pc, tab === 'charm' ? 'charm' : 'ring', pc.dataset.pv!));
+  }
+  $('work').classList.add('on');
+}
+function closeWork(): void { $('work').classList.remove('on'); hud(); homeTexts(); }
+$('work').addEventListener('click', e => {
+  const el = e.target as HTMLElement;
+  const tab = el.closest<HTMLButtonElement>('.tabs button')?.dataset.tab;
+  if (tab) { openWork(tab as CosKind | 'col'); return; }
+  const id = el.closest<HTMLButtonElement>('button[data-cos]')?.dataset.cos;
+  if (!id) return;
+  fb.unlock();
+  const r = buyOrWear(save, id);
+  if (r === 'poor') { fb.locked(); toast(t('needCoins', { n: (COSMETICS.find(c => c.id === id)?.price ?? 0) - save.coins })); return; }
+  if (r === 'bought') { fb.merge(); toast(t('newLook')); } else fb.becameFree();
+  persist(); applyLook(); hud(); openWork();
+});
+
 // ---------- boosters ----------
-const overlayOpen = (): boolean => ['home', 'settings', 'daily', 'map', 'shop', 'td'].some(id => $(id).classList.contains('on'));
+const overlayOpen = (): boolean => ['home', 'settings', 'work', 'map', 'shop', 'td'].some(id => $(id).classList.contains('on'));
 function canUse(b: Booster): boolean {
   if (!game || overlayOpen()) return false;
   if (b === 'hint') return game.state === 'play' && !renderer.hint && game.suggest() !== null;
@@ -308,7 +340,8 @@ $('setBtn').addEventListener('click', () => { fb.unlock(); openSettings(); });
 $('homeSet').addEventListener('click', () => { fb.unlock(); openSettings(); });
 $('playBtn').addEventListener('click', () => { fb.unlock(); closeHome(); if (game.state !== 'play' || level !== save.level) load(save.level); });
 $('setClose').addEventListener('click', closeSettings);
-$('dailyBtn').addEventListener('click', () => { fb.unlock(); openDaily(); });
+$('workBtn').addEventListener('click', () => { fb.unlock(); openWork(); });
+$('workClose').addEventListener('click', closeWork);
 $('shopBtn').addEventListener('click', () => { fb.unlock(); openShop(); });
 $('coinPill').addEventListener('click', () => { fb.unlock(); openShop(); });
 $('shopClose').addEventListener('click', closeShop);
@@ -324,14 +357,12 @@ $('path').addEventListener('click', e => {
   closeMap();
   load(n, false, n !== save.level);
 });
-$('dailyClaim').addEventListener('click', () => { fb.unlock(); claimToday(); });
-$('dailyClose').addEventListener('click', closeDaily);
 document.querySelectorAll<HTMLButtonElement>('.bst').forEach(btn => btn.addEventListener('click', () => useBooster(btn.dataset.b as Booster)));
 $<HTMLInputElement>('optSound').addEventListener('change', e => { save.sound = fb.sound = (e.target as HTMLInputElement).checked; persist(); });
 $<HTMLInputElement>('optVib').addEventListener('change', e => { save.vibration = fb.vibration = (e.target as HTMLInputElement).checked; persist(); });
-$('langTr').addEventListener('click', () => setLanguage('tr'));
-$('langEn').addEventListener('click', () => setLanguage('en'));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSettings(); closeDaily(); closeMap(); closeShop(); } });
+$('langSel').innerHTML = LANGS.map(l => `<option value="${l}">${LANG_NAMES[l]}</option>`).join('');
+$('langSel').addEventListener('change', e => setLanguage((e.target as HTMLSelectElement).value as Lang));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSettings(); closeWork(); closeMap(); closeShop(); } });
 
 renderer.onLand = c => game.charmLanded(c);
 attachInput(cv, () => game, renderer, fb, resetIdle);
@@ -342,8 +373,9 @@ setLang(save.lang);
 load(level);
 applyTexts();
 // First launch goes straight into level 1; later launches open the home screen.
-// The daily reward pops up over the home screen once per day (never on the very first launch).
-if (save.seenHome) { openHome(); if (dailyAvailable(save, dayKey(new Date())) !== null) openDaily(); }
+applyLook();
+// A small daily gift once per day (never on the very first launch).
+if (save.seenHome) { openHome(); dailyGift(); }
 else { save.seenHome = true; persist(); }
 
 let saveTick = 0;
@@ -352,7 +384,7 @@ const t0 = last;
 function frame(now: number): void {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
-  const blocked = ['ov', 'home', 'settings', 'daily', 'map', 'shop', 'td'].some(id => $(id).classList.contains('on'));
+  const blocked = ['ov', 'home', 'settings', 'work', 'map', 'shop', 'td'].some(id => $(id).classList.contains('on'));
   if (game.state === 'play' && !blocked) {
     idle += dt;
     save.playTime += dt;

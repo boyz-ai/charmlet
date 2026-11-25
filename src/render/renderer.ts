@@ -25,6 +25,8 @@ interface Particle { x: number; y: number; vx: number; vy: number; l: number; c:
 /** Canvas drawing + purely visual animations (flyers, particles, shakes). */
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
+  /** Bracelet Workshop look (cosmetic only) */
+  look = { ring: 'ring.classic', charm: 'charm.classic' };
   private scale = 1;
   private dpr = 1;
   private flyers: Flyer[] = [];
@@ -211,14 +213,44 @@ export class Renderer {
     ctx.lineWidth = w; ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.stroke();
   }
   private ringBody(r: Ring, a0: number, a1: number): void {
-    this.arc(r, a0, a1, r.heavy ? 20 : 15, r.fixed ? '#cfd3da' : r.heavy ? '#4a3b44' : 'rgba(20,4,16,.55)');
+    // rim: mechanics first (fixed = silver, heavy = iron), otherwise the workshop finish
+    const skin = this.look.ring;
+    const rim = r.fixed ? '#cfd3da' : r.heavy ? '#4a3b44'
+      : skin === 'ring.gold' ? '#d9b45a' : skin === 'ring.rose' ? '#e6a48c' : skin === 'ring.onyx' ? '#0e060b' : 'rgba(20,4,16,.55)';
+    if (skin === 'ring.crystal' && !r.fixed && !r.heavy) {
+      this.ctx.save(); this.ctx.shadowColor = COL[r.c].l; this.ctx.shadowBlur = 10;
+      this.arc(r, a0, a1, 15, 'rgba(255,255,255,.35)'); this.ctx.restore();
+    } else this.arc(r, a0, a1, r.heavy ? 20 : 15, rim);
     this.arc(r, a0, a1, 11, COL[r.c].c);
     this.arc(r, a0, a1, 2.5, COL[r.c].l, r.r - 2.5);
+    if (!r.fixed && !r.heavy) {
+      if (skin === 'ring.gold') this.arc(r, a0, a1, 1.5, '#fff2c2', r.r + 6);
+      else if (skin === 'ring.rose') this.arc(r, a0, a1, 1.5, '#ffd9cb', r.r + 6);
+      else if (skin === 'ring.onyx') this.arc(r, a0, a1, 1.2, '#e3c473', r.r + 6.5);
+      else if (skin === 'ring.crystal') this.arc(r, a0, a1, 2, 'rgba(255,255,255,.7)', r.r + 2.5);
+    }
     if (r.ice !== null) {
       const frost = r.ice > 0 ? 'rgba(200,240,255,.9)' : '#eef6fb';
       this.arc(r, a0, a1, 3, frost, r.r + 6);
       this.arc(r, a0, a1, 3, frost, r.r - 6);
     }
+  }
+  /** Draw a workshop preview (ring finish or charm set) into a small canvas. */
+  preview(cv: HTMLCanvasElement, kind: 'ring' | 'charm', id: string): void {
+    const ctx = cv.getContext('2d')!, saved = this.ctx, savedLook = { ...this.look };
+    const d = Math.min(window.devicePixelRatio || 1, 3), w = cv.clientWidth || 96, h = cv.clientHeight || 56;
+    cv.width = w * d; cv.height = h * d; ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, w, h);
+    this.ctx = ctx;
+    if (kind === 'ring') {
+      this.look.ring = id;
+      const ring = { x: w / 2, y: h * 0.58, r: h * 0.36, c: 'r', g: -Math.PI / 2, gone: false, pins: [], fixed: false, twin: false, lock: false, ice: null, heavy: false, bomb: null, clock: null } as Ring;
+      ctx.save(); ctx.translate(w / 2, h * 0.58); ctx.scale(0.55, 0.55); ctx.translate(-w / 2, -h * 0.58);
+      ring.r = h * 0.62; this.ringBody(ring, 0, Math.PI * 2); ctx.restore();
+    } else {
+      this.look.charm = id;
+      (['r', 'b', 'g'] as Color[]).forEach((c, q) => this.bead(w / 2 + (q - 1) * (h * 0.52), h / 2, c, h * 0.2));
+    }
+    this.ctx = saved; this.look = savedLook;
   }
   /** Mechanic badges stacked in the middle of a ring: bolt, padlocks, ice counter, bomb, weight. */
   private badge(game: Game, r: Ring, dx: number, i: number, time: number): void {
@@ -278,8 +310,31 @@ export class Renderer {
     // facet ring
     ctx.beginPath(); ctx.arc(0, 0, rad * 0.72, 0, 7); ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 1.2; ctx.stroke();
     // symbol with a little depth
+    const set = this.look.charm;
     const symbol = (): void => {
       ctx.beginPath();
+      if (set === 'charm.sky') {
+        if (c === 'r') { // sun
+          ctx.arc(0, 0, s * 0.5, 0, 7);
+          for (let q = 0; q < 8; q++) { const a = (q * Math.PI) / 4; ctx.moveTo(Math.cos(a) * s * 0.7, Math.sin(a) * s * 0.7); ctx.arc(Math.cos(a) * s * 0.85, Math.sin(a) * s * 0.85, s * 0.15, 0, 7); }
+        } else if (c === 'b') { // crescent moon
+          ctx.arc(0, 0, s * 0.9, Math.PI * 0.3, Math.PI * 1.7); ctx.arc(s * 0.35, 0, s * 0.7, Math.PI * 1.55, Math.PI * 0.45, true); ctx.closePath();
+        } else { // star
+          for (let q = 0; q < 10; q++) { const a = -Math.PI / 2 + (q * Math.PI) / 5, rr = q % 2 ? s * 0.42 : s; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath();
+        }
+        return;
+      }
+      if (set === 'charm.garden') {
+        if (c === 'r') { // flower
+          for (let q = 0; q < 5; q++) { const a = -Math.PI / 2 + (q * 2 * Math.PI) / 5; ctx.moveTo(Math.cos(a) * s * 0.55 + s * 0.38, Math.sin(a) * s * 0.55); ctx.arc(Math.cos(a) * s * 0.55, Math.sin(a) * s * 0.55, s * 0.38, 0, 7); }
+        } else if (c === 'b') { // drop
+          ctx.moveTo(0, -s); ctx.bezierCurveTo(s * 0.9, -s * 0.1, s * 0.75, s * 0.9, 0, s * 0.9); ctx.bezierCurveTo(-s * 0.75, s * 0.9, -s * 0.9, -s * 0.1, 0, -s); ctx.closePath();
+        } else { // clover
+          for (const [dx, dy] of [[0, -0.45], [-0.45, 0.15], [0.45, 0.15]]) { ctx.moveTo(dx * s + s * 0.42, dy * s); ctx.arc(dx * s, dy * s, s * 0.42, 0, 7); }
+          ctx.moveTo(-s * 0.08, s * 0.2); ctx.lineTo(s * 0.08, s * 0.2); ctx.lineTo(s * 0.12, s * 1.0); ctx.lineTo(-s * 0.04, s * 1.0); ctx.closePath();
+        }
+        return;
+      }
       if (k.s === 'heart') {
         ctx.moveTo(0, s * 0.9); ctx.bezierCurveTo(-s * 1.6, -s * 0.2, -s * 0.6, -s * 1.3, 0, -s * 0.4);
         ctx.bezierCurveTo(s * 0.6, -s * 1.3, s * 1.6, -s * 0.2, 0, s * 0.9);

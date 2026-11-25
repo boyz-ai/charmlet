@@ -49,11 +49,15 @@ Spring/ease-out on touch · rotation tick sound every 15° + light haptic · "fr
 Every color also has a symbol (ruby = heart, sapphire = diamond, emerald = triangle; later colors: amethyst = star, topaz = circle). High contrast against the velvet background.
 
 ## Meta (v1.0 — max 2 systems)
+- Implemented: (1) win streak, (2) Bracelet Workshop — coins buy ring finishes (gold, rose gold, onyx, crystal), charm sets (sky, garden) and board themes (night, emerald, ocean, rose); every finished chapter of 50 levels adds a collectible charm to the bracelet (+150 coins). The daily reward is now a small automatic gift on the home screen (no extra screen). Cosmetics never change rule colors.
 1. Win streak: consecutive first-try wins; at 3+ the next level starts with a bonus (+2 moves); visible on the fail screen ("Your streak will burn!").
 2. Flexible daily reward ("log in 3 of 7 days"), day-7 reward larger than days 1–6 combined.
    Implemented as a 7-step track: one step per calendar day the game is opened; missed days never reset it. Days 1–6: 20/25/30+Undo/35/40+Magnet/50 coins; day 7: 250 coins + one of each booster.
 - Coins (soft currency): win 10 · hard 15 · super hard 25. +3 moves on the out-of-moves screen costs 60 coins (rewarded ad in M7).
 - Boosters: Undo 60 · Extra slot 90 · Magnet 120 coins after the 2 free uses. Magnet pulls every charm of the most common tray color; a level is won when all rings are out even if the Magnet left a partial color. Extra slot and Magnet can also rescue a full tray from the fail screen.
+
+## Languages
+English, Turkish, German, French, Spanish, Portuguese, Italian, Russian, Japanese, Korean, Simplified Chinese, Indonesian; device language is detected automatically. Translations are Claude's; native speakers should review the store texts of the main markets before launch.
 
 ## Monetization (IAA + IAP)
 - Implemented (test mode until the native build): rewarded +3 moves on the out-of-moves screen, rewarded 2× coins on the win screen (not offered when a forced ad is due), forced ads only after 25 min of play, every 3+ levels and 150+ s apart, never for payers. Shop: Starter $2.99 (once) · No Ads $4.99 (once) · 2,500 coins $9.99 · 6,000 coins $19.99 · 18,000 coins $49.99.
