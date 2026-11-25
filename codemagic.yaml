@@ -14,7 +14,7 @@ workflows:
       vars:
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
-        APP_STORE_APPLE_ID: 0               # the app's "Apple ID" number from App Store Connect → App Information
+        APP_STORE_APPLE_ID: 6839210625             # the app's "Apple ID" number from App Store Connect → App Information
         VITE_PACKS_URL: https://KULLANICI_ADI.github.io/charm/packs/
       node: 22
       xcode: latest
