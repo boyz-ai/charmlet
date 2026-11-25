@@ -6,6 +6,7 @@ import { Renderer } from './render/renderer';
 import { HomeScene } from './render/home';
 import { isNative, mirrorSave, nativeChrome, nativeHaptics, restoreSave } from './native/native';
 import { AdMobAds } from './native/admob';
+import { ADMOB } from './config';
 import { attachInput } from './input/input';
 import { FeedbackManager } from './feedback/feedback';
 import { LAYOUTS, LEVELS } from './levels/levels';
@@ -45,6 +46,8 @@ const admob = isNative() ? new AdMobAds() : null;
 const ads: AdService = admob ?? new TestAds(dialog);
 /** Real store purchases arrive with M7; until then the phone app shows the shop as "coming soon". */
 const IAP_READY = !isNative();
+/** While test ads are on, say why no ad came (to fix setup problems); players of the store build only see the friendly text. */
+const noAdToast = (): void => toast(t('noAd') + (ADMOB.testing && admob?.lastError ? ` [${admob.lastError}]` : ''));
 if (isNative()) document.getElementById('testNote')?.remove(); // the web test note does not apply to the phone app
 const iap: IAPService = new TestIAP(dialog, t);
 let lastAdS = -1e9;
@@ -163,7 +166,7 @@ function onWin(): void {
   };
   if (adNext) show(t('winTitle'), text, last ? t('again') : t('next'), () => void next());
   else show(t('winTitle'), text, last ? t('again') : t('next'), () => playNext(), t('doubleCoins', { n: coins }), async () => {
-    if (await ads.showRewarded('double')) { save.coins += coins; persist(); hud(); toast(t('doubled')); } else if (isNative()) toast(t('noAd'));
+    if (await ads.showRewarded('double')) { save.coins += coins; persist(); hud(); toast(t('doubled')); } else if (isNative()) noAdToast();
     playNext();
   });
 }
@@ -185,7 +188,7 @@ function onLose(reason: 'tray' | 'moves' | 'bomb'): void {
     const left = game.rings.filter(r => !r.gone).length;
     const cont = (): void => { game.addMoves(CONTINUE_MOVES); hideOverlay(); hud(); };
     // coins first; without coins a rewarded ad will go here (M7) — for now a free test button
-    const watch = async (): Promise<void> => { if (await ads.showRewarded('continue')) cont(); else if (isNative()) toast(t('noAd')); };
+    const watch = async (): Promise<void> => { if (await ads.showRewarded('continue')) cont(); else if (isNative()) noAdToast(); };
     if (save.coins >= CONTINUE_PRICE)
       show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('watchMoves'), () => void watch(),
         t('continueCoins', { n: CONTINUE_MOVES, p: CONTINUE_PRICE }), () => { if (buyContinue(save)) { persist(); cont(); } }, t('retry'), retry);
