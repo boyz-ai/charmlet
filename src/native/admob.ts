@@ -11,15 +11,20 @@ export class AdMobAds implements AdService {
   /** Consent first (EU form if needed, then the iOS tracking prompt), then the SDK, then preload. */
   start(): Promise<void> {
     this.started ??= (async () => {
+      // Each step may fail on its own (e.g. no EU message set up in AdMob yet); a failure must never stop the ads.
+      let canAds = true;
       try {
         let info = await AdMob.requestConsentInfo();
         if (info.status === AdmobConsentStatus.REQUIRED && info.isConsentFormAvailable) info = await AdMob.showConsentForm();
-        this.canAds = info.canRequestAds;
+        canAds = info.canRequestAds !== false;
+      } catch { /* consent service unavailable: Google then serves limited, non-personalised ads */ }
+      try {
         const att = await AdMob.trackingAuthorizationStatus();
         if (att.status === 'notDetermined') await AdMob.requestTrackingAuthorization();
-        await AdMob.initialize({ initializeForTesting: ADMOB.testing });
-        if (this.canAds) { void this.load('rewarded'); void this.load('interstitial'); }
-      } catch { this.canAds = false; }
+      } catch { /* not iOS 14+ or prompt unavailable */ }
+      try { await AdMob.initialize({ initializeForTesting: ADMOB.testing }); } catch { /* SDK may already be up */ }
+      this.canAds = canAds;
+      if (this.canAds) { void this.load('rewarded'); void this.load('interstitial'); }
     })();
     return this.started;
   }
