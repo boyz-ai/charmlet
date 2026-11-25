@@ -38,6 +38,8 @@ Implement GDD Meta: win streak with +2 moves bonus at 3+, streak warning on the 
 
 ## M5.3 — DONE by Claude: Bracelet Workshop + chapter collection, animated home screen, 12 languages
 
+## M5.4 — DONE by Claude: full-screen home, new buttons, music, bundled font, booster intro, restore purchases, privacy page, weekly automatic level packs
+
 ## M6 — Capacitor + Android build (1–2 days)
 ```
 Add Capacitor (Android first). Wire Capacitor Haptics into FeedbackManager and Capacitor Preferences into SaveService. Explain step by step how I install Android Studio on Windows and run the app on my Android test phone.

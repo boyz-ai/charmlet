@@ -26,7 +26,6 @@
   "streakBurn": "Ta série ({n}) va s’envoler ! ",
   "ringsLeft": "Presque : plus que {n} anneaux !",
   "retry": "Réessayer",
-  "devNote": "Version de développement. Touche le plateau une fois pour activer le son.",
   "role.tut1": "Tutoriel",
   "hint.tut1": "Fais glisser un anneau pour le tourner. Place son ouverture là où il croise un voisin. Un anneau qui brille est libre : touche-le.",
   "role.tut2": "Tutoriel",
@@ -132,5 +131,15 @@
   "cos.board.night": "Nuit",
   "cos.board.emerald": "Émeraude",
   "cos.board.ocean": "Océan",
-  "cos.board.rose": "Rose"
+  "cos.board.rose": "Rose",
+  "music": "Musique",
+  "restore": "Restaurer les achats",
+  "restored": "Achats restaurés.",
+  "nothingRestore": "Aucun achat à restaurer.",
+  "privacy": "Confidentialité",
+  "support": "Assistance",
+  "gotIt": "Compris",
+  "coachBoosters": "Bloqué ? Ils t’aident : 💡 indice, ↶ annuler, ⊕ place en plus, 🧲 aimant. Quelques-uns de chaque sont offerts !",
+  "allDone": "De nouveaux niveaux arrivent bientôt ! En attendant, rejoue un ancien.",
+  "newLevels": "{n} nouveaux niveaux viennent d’arriver !"
 }

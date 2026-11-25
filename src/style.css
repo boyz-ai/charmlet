@@ -142,3 +142,37 @@ h1{font-size:clamp(20px,6vw,26px);white-space:nowrap}
 .hgrid button span:last-child{font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #rs{white-space:nowrap;padding:0 12px}
 .bst span[data-i18n]{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- v2 look: full-screen home & sheets, game buttons ---------- */
+.ov.home{position:fixed;inset:0;z-index:4;border-radius:0;padding:0 18px 28px;justify-content:flex-start;max-width:none}
+.ov.home > *:not(.homecv){max-width:440px;width:100%}
+.homecv{border-radius:0}
+.htop{display:flex;justify-content:flex-end;padding-top:max(14px,env(safe-area-inset-top))}
+.hcoins{display:flex;align-items:center;gap:6px;min-height:40px;padding:0 6px 0 10px;border-radius:20px;background:rgba(20,4,16,.55);border:2px solid #e3c473;color:#fff;font-size:17px}
+.hcoins .plus,.coinpill .plus{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#e3c473;color:#2a1426;font-size:16px;line-height:1}
+.ov.home .hspace{height:34vh;min-height:170px;max-height:300px}
+.ov.home .htitle{font-size:clamp(34px,11vw,48px)!important}
+.ov.home .big{width:min(100%,320px);min-height:62px;font-size:24px}
+.ov.home .hgrid{margin-top:auto}
+.ov.sheet{position:fixed;inset:0;z-index:5;border-radius:0;max-width:none;padding-top:max(22px,env(safe-area-inset-top))}
+.ov.sheet > *{max-width:440px}
+.ov.td{position:fixed;inset:0;z-index:6;border-radius:0}
+/* game header */
+header h1{font-size:clamp(19px,5.6vw,24px)}
+.gbtn{width:46px;height:46px;min-height:0;padding:0;display:grid;place-items:center;border-radius:50%;background:linear-gradient(180deg,#7a2f68,#3a1133);border:2px solid #e3c473;box-shadow:0 3px 0 #8a6a24}
+.gbtn svg{width:22px;height:22px;fill:#f3dc9a}
+.gbtn:active{transform:translateY(2px);box-shadow:0 1px 0 #8a6a24}
+/* HUD + boosters */
+.pill,.coinpill{background:linear-gradient(180deg,#5b2150,#33102c);color:#fff;border:2px solid #e3c473;box-shadow:0 3px 0 rgba(138,106,36,.8)}
+.pill span{color:#f1dcea}
+.bst{background:linear-gradient(180deg,#5b2150,#2a0d24);color:#fff;border:2px solid #e3c473;box-shadow:0 4px 0 rgba(138,106,36,.85)}
+.bst:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(138,106,36,.85)}
+.bst[aria-disabled=true]{opacity:.55;filter:saturate(.6)}
+.bst.glow{box-shadow:0 0 0 3px #ffe08a,0 4px 0 rgba(138,106,36,.85)}
+.hint{font-size:15px;color:var(--muted)}
+
+.links{font-size:14px;color:#e8cfe0}.links a{color:#f3dc9a}
+.coach{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:7;width:min(92vw,360px);display:none;flex-direction:column;align-items:center;gap:8px;padding:14px 16px;border-radius:18px;background:#2a0d24;color:#fff;border:2px solid #e3c473;box-shadow:0 10px 30px rgba(0,0,0,.4);text-align:center}
+.coach.on{display:flex}.coach p{margin:0;font-size:16px}
+.coach::after{content:"";position:absolute;bottom:-10px;left:50%;margin-left:-9px;border:9px solid transparent;border-bottom:0;border-top-color:#e3c473}
+.coach button{min-height:40px;background:#e3c473;color:#2a1426}

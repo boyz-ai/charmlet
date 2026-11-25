@@ -42,7 +42,7 @@ export class HomeScene {
     }
 
     // three interlocked rings
-    const R = Math.min(w * 0.14, 50), cy = h * 0.14 + 4, gapx = R * 1.22;
+    const R = Math.min(w * 0.16, 78), cy = Math.max(h * 0.2, 120), gapx = R * 1.22;
     const rings = [0, 1, 2].map(k => ({ x: w / 2 + (k - 1) * gapx, y: cy + (k === 1 ? -R * 0.1 : R * 0.08), g: t * (k === 1 ? -0.5 : 0.4) + k * 2.1, col: COLS[k] }));
     // back halves first, then front halves → woven look
     for (const pass of [0, 1]) rings.forEach((r, k) => this.ring(r.x, r.y, R, r.g, r.col, pass, k));

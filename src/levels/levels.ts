@@ -49,4 +49,6 @@ export interface LevelSpec {
   moves: number;
 }
 
+/** All playable levels: the 1000 built in, then any downloaded weekly packs appended (see services/packs). */
 export const LEVELS = raw as unknown as LevelSpec[];
+export const BUILT_IN_LEVELS = LEVELS.length;

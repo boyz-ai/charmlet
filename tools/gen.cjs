@@ -179,30 +179,36 @@ function fastPick(n, plan) {
   return best;
 }
 
+/** Generate level number n (1-based). Deterministic: the same n always gives the same level. */
+function makeLevel(n) {
+  seed = 1000 + n * 7919; // each level has its own seed → workers / CI runs can split ranges
+  const plan = planFor(n);
+  let found = null;
+  if (n > 100) found = fastPick(n, plan);
+  for (let t = 0; t < 300 && !found; t++) {
+    const spec = randomSpec(plan.layout, plan.ncol, plan.mech);
+    const r = solve(build(spec), plan.ncol === 3 ? 120000 : 60000);
+    if (!r || !isFinite(r.moves) || r.moves < plan.range[0] || r.moves > plan.range[1]) {
+      if (t % 40 === 39) { plan.layout = plan.ncol === 3 ? pick(L9) : pick(L6); if (t > 150) plan.range = [Math.max(1, plan.range[0] - 1), plan.range[1] + 1]; }
+      continue;
+    }
+    found = { ...spec, role: plan.role, minMoves: r.moves, moves: r.moves + plan.slack };
+  }
+  if (!found) throw new Error('could not generate level ' + n);
+  if (!found.sol) { const r = solve(build(found), 2000000, true); found.sol = r.path; }
+  return found;
+}
+
 if (require.main === module) {
   const A = Number(process.argv[2] || 1), B = Number(process.argv[3] || 100), out = [];
   for (let n = A; n <= B; n++) {
-    seed = 1000 + n * 7919; // each level has its own seed → workers can split ranges
-    const plan = planFor(n);
-    let found = null;
-    if (n > 100) { found = fastPick(n, plan); }
-    for (let t = 0; t < 300 && !found; t++) {
-      const spec = randomSpec(plan.layout, plan.ncol, plan.mech);
-      const lv = build(spec);
-      const r = solve(lv, plan.ncol === 3 ? 120000 : 60000);
-      if (!r || !isFinite(r.moves) || r.moves < plan.range[0] || r.moves > plan.range[1]) {
-        if (t % 40 === 39) { plan.layout = plan.ncol === 3 ? pick(L9) : pick(L6); if (t > 150) plan.range = [Math.max(1, plan.range[0] - 1), plan.range[1] + 1]; }
-        continue;
-      }
-      found = { ...spec, role: plan.role, minMoves: r.moves, moves: r.moves + plan.slack };
-    }
-    if (!found) { console.error('FAILED level', n, plan); process.exit(1); }
+    const found = makeLevel(n);
     out.push(found);
-    console.error(`L${n} ${found.role} ${found.layout} min=${found.minMoves} limit=${found.moves} mech=${JSON.stringify(plan.mech)}`);
+    console.error(`L${n} ${found.role} ${found.layout} min=${found.minMoves} limit=${found.moves}`);
   }
   const fs = require('fs');
   if (A === 1 && B === 100) fs.writeFileSync(__dirname + '/../levels/levels.json', JSON.stringify(out).replace(/\},\{/g, '},\n{'));
   else fs.writeFileSync(require('os').tmpdir() + `/levels-${A}-${B}.json`, JSON.stringify(out));
   console.error('wrote', out.length, 'levels');
 }
-module.exports = { LAYOUTS, build, solve, planFor };
+module.exports = { LAYOUTS, build, solve, planFor, makeLevel };

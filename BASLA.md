@@ -21,3 +21,16 @@ ROADMAP.md içindeki **M2** promptunu Antigravity'nin ajan paneline yapıştır.
 - **GDD.md** oyun belgesi · **AGENTS.md** ajan kuralları · **DECISION.md** devam/iptal eşikleri · **ROADMAP.md** aşamalar ve promptlar
 - **src/** oyunun kodu (core = kurallar, render = çizim, input = dokunma, feedback = ses/titreşim)
 - **tests/** kural testleri · **levels/** seviyeler (sadece `tools/gen.js` ile üretilir) · **prototype/** ilk prototip
+
+
+## Haftalık otomatik bölümler (GitHub kurulumu, bir kez)
+Oyunda 1000 bölüm hazır geliyor. Her pazartesi GitHub kendiliğinden 50 yeni bölüm üretir, hepsini testlerle doğrular ve internete koyar. Oyun açılınca yeni bölümleri indirir, her birini kendisi de çözerek kontrol eder, sonra ekler. Uygulama güncellemesi gerekmez.
+1. github.com'da hesap aç ve **charm** adında bir depo (repository) oluştur.
+2. Antigravity'ye: "Bu projeyi GitHub'daki charm depoma gönder (git remote add origin … ; git push -u origin main)".
+3. GitHub'da depo → Settings → Pages → Source: **GitHub Actions** seç.
+4. Actions sekmesinde "Publish site" çalışınca site açılır: https://KULLANICI_ADIN.github.io/charm/
+   - Gizlilik sayfası: https://KULLANICI_ADIN.github.io/charm/privacy.html (mağaza bu adresi ister)
+   - Bölüm paketleri: https://KULLANICI_ADIN.github.io/charm/packs/
+5. Telefon uygulamasını derlerken VITE_PACKS_URL=https://KULLANICI_ADIN.github.io/charm/packs/ verilir (M6'da Claude ayarlar).
+6. Elle ek paket: Actions → "Weekly level pack" → Run workflow.
+7. public/privacy.html içindeki SUPPORT_EMAIL yerine kendi destek e-postanı yaz.

@@ -244,8 +244,8 @@ export class Renderer {
     if (kind === 'ring') {
       this.look.ring = id;
       const ring = { x: w / 2, y: h * 0.58, r: h * 0.36, c: 'r', g: -Math.PI / 2, gone: false, pins: [], fixed: false, twin: false, lock: false, ice: null, heavy: false, bomb: null, clock: null } as Ring;
-      ctx.save(); ctx.translate(w / 2, h * 0.58); ctx.scale(0.55, 0.55); ctx.translate(-w / 2, -h * 0.58);
-      ring.r = h * 0.62; this.ringBody(ring, 0, Math.PI * 2); ctx.restore();
+      ctx.save(); ctx.translate(w / 2, h * 0.55); ctx.scale(0.8, 0.8); ctx.translate(-w / 2, -h * 0.55);
+      ring.y = h * 0.55; ring.r = h * 0.42; this.ringBody(ring, 0, Math.PI * 2); ctx.restore();
     } else {
       this.look.charm = id;
       (['r', 'b', 'g'] as Color[]).forEach((c, q) => this.bead(w / 2 + (q - 1) * (h * 0.52), h / 2, c, h * 0.2));

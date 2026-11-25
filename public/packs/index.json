@@ -1,0 +1,11 @@
+{
+  "packs": [
+    {
+      "pack": 1,
+      "from": 1001,
+      "to": 1050,
+      "file": "pack-1.json",
+      "sha256": "cc6190fb35be02bc16b38c93ab425ae737de4a8553b9416244b14d138d14cab5"
+    }
+  ]
+}

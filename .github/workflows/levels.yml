@@ -1,0 +1,32 @@
+# Every Monday: generate the next pack of 50 levels, verify every solution with the tests, commit it.
+# The "Publish site" workflow then puts it on GitHub Pages, where the game downloads it.
+name: Weekly level pack
+on:
+  schedule:
+    - cron: '17 2 * * 1'   # Mondays 02:17 UTC
+  workflow_dispatch: {}     # "Run workflow" button for an extra pack
+permissions:
+  contents: write
+concurrency: level-pack
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate the next pack
+        run: node tools/make-pack.cjs
+      - name: Verify (replays every level of every pack through the real game rules)
+        run: npx vitest run tests/packs.test.ts
+      - name: Commit the pack
+        run: |
+          git config user.name "level-bot"
+          git config user.email "level-bot@users.noreply.github.com"
+          git add public/packs
+          git commit -m "Weekly level pack" || exit 0
+          git push

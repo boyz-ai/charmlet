@@ -26,7 +26,6 @@
   "streakBurn": "Your streak ({n}) will burn! ",
   "ringsLeft": "So close: {n} rings left!",
   "retry": "Try again",
-  "devNote": "Development build. Tap the board once to enable sound.",
   "role.tut1": "Tutorial",
   "hint.tut1": "Drag a ring to turn it. Bring its gap to where it crosses a neighbour. A glowing ring is free: tap it.",
   "role.tut2": "Tutorial",
@@ -132,5 +131,15 @@
   "cos.board.night": "Night",
   "cos.board.emerald": "Emerald",
   "cos.board.ocean": "Ocean",
-  "cos.board.rose": "Rose"
+  "cos.board.rose": "Rose",
+  "music": "Music",
+  "restore": "Restore purchases",
+  "restored": "Purchases restored.",
+  "nothingRestore": "No purchases to restore.",
+  "privacy": "Privacy",
+  "support": "Support",
+  "gotIt": "Got it",
+  "coachBoosters": "Stuck? These help: 💡 hint, ↶ undo, ⊕ extra slot, 🧲 magnet. You get a few of each for free!",
+  "allDone": "New levels are coming soon! Until then, enjoy a replay.",
+  "newLevels": "{n} new levels just arrived!"
 }

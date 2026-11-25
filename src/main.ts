@@ -1,4 +1,6 @@
 import './style.css';
+import '@fontsource/fredoka/500.css';
+import '@fontsource/fredoka/600.css';
 import { Game } from './core/game';
 import { Renderer } from './render/renderer';
 import { HomeScene } from './render/home';
@@ -7,12 +9,13 @@ import { FeedbackManager } from './feedback/feedback';
 import { LAYOUTS, LEVELS } from './levels/levels';
 import { LANGS, LANG_NAMES, LocalSaveService, type Lang, type SaveData } from './services/save';
 import { setLang, t } from './i18n';
+import { appendPacks, cachedPacks, fetchNewPacks } from './services/packs';
 import {
   BOOSTERS, BOOSTER_PRICE, CONTINUE_MOVES, CONTINUE_PRICE, buyContinue, claimDaily, dayKey,
   refundBooster, spendBooster, streakBonus, winCoins, autoHint, HINT_NUDGE_FAILS, type Booster,
 } from './meta/meta';
 import { CHAPTER_REWARD, COLLECTION, COSMETICS, buyOrWear, collected, ownsCos, type CosKind } from './meta/workshop';
-import { PRODUCTS, TestAds, TestDialog, TestIAP, canBuy, grant, interstitialDue, type AdService, type IAPService } from './services/monetize';
+import { PRODUCTS, TestAds, TestDialog, TestIAP, canBuy, grant, interstitialDue, restoreOwned, type AdService, type IAPService } from './services/monetize';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
 const cv = $<HTMLCanvasElement>('c');
@@ -23,6 +26,7 @@ const store = new LocalSaveService();
 const save: SaveData = store.load();
 const persist = (): void => store.save(save);
 
+appendPacks(LEVELS, cachedPacks()); // weekly packs downloaded earlier
 let level = Math.min(save.level, LEVELS.length - 1);
 let failedOnce = false;
 /** seconds since the player last touched the board (drives the ghost-hand hint) */
@@ -58,7 +62,7 @@ function levelTexts(): void {
   $('hint').textContent = t('hint.' + spec.role);
 }
 function homeTexts(): void {
-  $('playBtn').textContent = `${t('play')} · ${t('playLevel', { n: save.level + 1 })}`;
+  $('playBtn').textContent = save.level < LEVELS.length ? `${t('play')} · ${t('playLevel', { n: save.level + 1 })}` : t('play');
   $('homeStreak').textContent = save.streak > 0 ? t('streakNow', { n: save.streak }) : '';
   $('homeCoins').textContent = String(save.coins);
 }
@@ -113,6 +117,7 @@ function load(n: number, keepFail = false, isReplay = false): void {
   $('stPill').classList.toggle('bonus', bonus > 0);
   levelTexts();
   hideOverlay();
+  maybeCoach();
   resetIdle();
   hud();
 }
@@ -126,7 +131,7 @@ function onWin(): void {
   fb.win();
   renderer.confetti();
   if (replay) {
-    show(t('winTitle'), t('replayDone'), t('continueAt', { n: save.level + 1 }), () => load(save.level), t('backToMap'), () => openMap());
+    show(t('winTitle'), t('replayDone'), t('continueAt', { n: Math.min(save.level, LEVELS.length - 1) + 1 }), () => playNext(), t('backToMap'), () => openMap());
     return;
   }
   if (!failedOnce) save.streak++;
@@ -137,7 +142,7 @@ function onWin(): void {
   save.best = Math.max(save.best, level + 1);
   const gotNew = collected(save.best) > before;
   if (gotNew) save.coins += CHAPTER_REWARD;
-  save.level = last ? 0 : level + 1;
+  save.level = level + 1; // past the last level = waiting for the next weekly pack
   save.levelsSinceAd++;
   persist();
   hud();
@@ -147,12 +152,12 @@ function onWin(): void {
   const adNext = interstitialDue(save, performance.now() / 1000, lastAdS, false);
   const next = async (): Promise<void> => {
     if (adNext) { await ads.showInterstitial(); lastAdS = performance.now() / 1000; save.levelsSinceAd = 0; persist(); }
-    load(save.level);
+    playNext();
   };
   if (adNext) show(t('winTitle'), text, last ? t('again') : t('next'), () => void next());
-  else show(t('winTitle'), text, last ? t('again') : t('next'), () => load(save.level), t('doubleCoins', { n: coins }), async () => {
+  else show(t('winTitle'), text, last ? t('again') : t('next'), () => playNext(), t('doubleCoins', { n: coins }), async () => {
     if (await ads.showRewarded('double')) { save.coins += coins; persist(); hud(); toast(t('doubled')); }
-    load(save.level);
+    playNext();
   });
 }
 
@@ -196,14 +201,32 @@ function show(title: string, text: string, b1: string, f1: () => void, b2?: stri
 function hideOverlay(): void { $('ov').classList.remove('on'); }
 
 function openHome(): void { homeTexts(); $('home').classList.add('on'); homeScene.start(); $('playBtn').focus(); boosterTexts(); }
-function closeHome(): void { $('home').classList.remove('on'); homeScene.stop(); boosterTexts(); if (bonusMsg) { toast(bonusMsg); bonusMsg = ''; } }
+function closeHome(): void { $('home').classList.remove('on'); homeScene.stop(); maybeCoach(); boosterTexts(); if (bonusMsg) { toast(bonusMsg); bonusMsg = ''; } }
 function openSettings(): void {
   $<HTMLInputElement>('optSound').checked = save.sound;
   $<HTMLInputElement>('optVib').checked = save.vibration;
+  $<HTMLInputElement>('optMusic').checked = save.music;
   $('settings').classList.add('on');
   $('setClose').focus();
 }
 function closeSettings(): void { $('settings').classList.remove('on'); boosterTexts(); }
+
+/** Introduce the booster bar once, right after the tutorials, when the board is visible. */
+function maybeCoach(): void {
+  if (save.seenBoosters || level < 3 || replay || overlayOpen()) return;
+  save.seenBoosters = true; persist();
+  $('coachText').textContent = t('coachBoosters');
+  const bar = document.querySelector('.boosters')!.getBoundingClientRect();
+  $('coach').style.bottom = `${Math.max(12, window.innerHeight - bar.top + 14)}px`; // sits just above the booster bar
+  $('coach').classList.add('on');
+}
+
+/** Play the next new level; after the last one, replay a random finished level until new packs arrive. */
+function playNext(): void {
+  if (save.level < LEVELS.length) { load(save.level); return; }
+  toast(t('allDone'));
+  load(3 + Math.floor(Math.random() * (LEVELS.length - 3)), false, true);
+}
 
 // ---------- shop ----------
 function openShop(): void {
@@ -338,12 +361,13 @@ $('rs').addEventListener('click', () => { fb.unlock(); load(level); });
 $('homeBtn').addEventListener('click', () => { fb.unlock(); openHome(); });
 $('setBtn').addEventListener('click', () => { fb.unlock(); openSettings(); });
 $('homeSet').addEventListener('click', () => { fb.unlock(); openSettings(); });
-$('playBtn').addEventListener('click', () => { fb.unlock(); closeHome(); if (game.state !== 'play' || level !== save.level) load(save.level); });
+$('playBtn').addEventListener('click', () => { fb.unlock(); closeHome(); if (game.state !== 'play' || level !== save.level) playNext(); });
 $('setClose').addEventListener('click', closeSettings);
 $('workBtn').addEventListener('click', () => { fb.unlock(); openWork(); });
 $('workClose').addEventListener('click', closeWork);
 $('shopBtn').addEventListener('click', () => { fb.unlock(); openShop(); });
 $('coinPill').addEventListener('click', () => { fb.unlock(); openShop(); });
+$('homeCoinBtn').addEventListener('click', () => { fb.unlock(); openShop(); });
 $('shopClose').addEventListener('click', closeShop);
 $('mapBtn').addEventListener('click', () => { fb.unlock(); closeHome(); openMap(); });
 $('mapPrev').addEventListener('click', () => openMap(mapChapter - 1));
@@ -359,6 +383,12 @@ $('path').addEventListener('click', e => {
 });
 document.querySelectorAll<HTMLButtonElement>('.bst').forEach(btn => btn.addEventListener('click', () => useBooster(btn.dataset.b as Booster)));
 $<HTMLInputElement>('optSound').addEventListener('change', e => { save.sound = fb.sound = (e.target as HTMLInputElement).checked; persist(); });
+$<HTMLInputElement>('optMusic').addEventListener('change', e => { save.music = fb.music = (e.target as HTMLInputElement).checked; persist(); if (save.music) { fb.unlock(); fb.startMusic(); } });
+$('restoreBtn').addEventListener('click', async () => {
+  const n = restoreOwned(save, await iap.restore());
+  persist(); toast(n > 0 || save.paid ? t('restored') : t('nothingRestore'));
+});
+$('coachOk').addEventListener('click', () => $('coach').classList.remove('on'));
 $<HTMLInputElement>('optVib').addEventListener('change', e => { save.vibration = fb.vibration = (e.target as HTMLInputElement).checked; persist(); });
 $('langSel').innerHTML = LANGS.map(l => `<option value="${l}">${LANG_NAMES[l]}</option>`).join('');
 $('langSel').addEventListener('change', e => setLanguage((e.target as HTMLSelectElement).value as Lang));
@@ -369,11 +399,19 @@ attachInput(cv, () => game, renderer, fb, resetIdle);
 
 fb.sound = save.sound;
 fb.vibration = save.vibration;
+fb.music = save.music;
+// browsers only allow sound after the first touch: start the music then
+window.addEventListener('pointerdown', () => { fb.unlock(); fb.startMusic(); }, { once: true });
 setLang(save.lang);
 load(level);
 applyTexts();
 // First launch goes straight into level 1; later launches open the home screen.
 applyLook();
+// new weekly levels: download in the background, add them when they are verified
+void fetchNewPacks(LEVELS.length).then(p => {
+  const n = appendPacks(LEVELS, p);
+  if (n) { toast(t('newLevels', { n })); homeTexts(); if (game.state === 'play') levelTexts(); }
+});
 // A small daily gift once per day (never on the very first launch).
 if (save.seenHome) { openHome(); dailyGift(); }
 else { save.seenHome = true; persist(); }

@@ -26,7 +26,6 @@
   "streakBurn": "連勝（{n}）が途切れます！",
   "ringsLeft": "あと少し：残り{n}個！",
   "retry": "もう一度",
-  "devNote": "開発版です。盤面を一度タップすると音が出ます。",
   "role.tut1": "チュートリアル",
   "hint.tut1": "リングをドラッグして回そう。すき間を隣のリングとの交点に合わせよう。光ったリングは外せる：タップしよう。",
   "role.tut2": "チュートリアル",
@@ -132,5 +131,15 @@
   "cos.board.night": "夜",
   "cos.board.emerald": "エメラルド",
   "cos.board.ocean": "オーシャン",
-  "cos.board.rose": "ローズ"
+  "cos.board.rose": "ローズ",
+  "music": "音楽",
+  "restore": "購入を復元",
+  "restored": "購入を復元しました。",
+  "nothingRestore": "復元する購入はありません。",
+  "privacy": "プライバシー",
+  "support": "サポート",
+  "gotIt": "OK",
+  "coachBoosters": "困ったらこれ：💡ヒント、↶戻す、⊕追加マス、🧲マグネット。それぞれ少し無料でもらえます！",
+  "allDone": "新しいレベルはもうすぐ！それまでは前のレベルを楽しもう。",
+  "newLevels": "新しいレベルが{n}個届きました！"
 }

@@ -26,7 +26,6 @@
   "streakBurn": "La tua serie ({n}) andrà persa! ",
   "ringsLeft": "Quasi fatta: mancano {n} anelli!",
   "retry": "Riprova",
-  "devNote": "Versione di sviluppo. Tocca il tabellone una volta per attivare il suono.",
   "role.tut1": "Tutorial",
   "hint.tut1": "Trascina un anello per girarlo. Porta la sua apertura dove incrocia un vicino. Un anello che brilla è libero: toccalo.",
   "role.tut2": "Tutorial",
@@ -132,5 +131,15 @@
   "cos.board.night": "Notte",
   "cos.board.emerald": "Smeraldo",
   "cos.board.ocean": "Oceano",
-  "cos.board.rose": "Rosa"
+  "cos.board.rose": "Rosa",
+  "music": "Musica",
+  "restore": "Ripristina acquisti",
+  "restored": "Acquisti ripristinati.",
+  "nothingRestore": "Nessun acquisto da ripristinare.",
+  "privacy": "Privacy",
+  "support": "Assistenza",
+  "gotIt": "Ho capito",
+  "coachBoosters": "Bloccato? Ti aiutano: 💡 suggerimento, ↶ annulla, ⊕ posto extra, 🧲 calamita. Ne hai alcuni gratis di ciascuno!",
+  "allDone": "Nuovi livelli in arrivo! Intanto rigioca un livello.",
+  "newLevels": "Sono arrivati {n} nuovi livelli!"
 }

@@ -26,7 +26,6 @@
   "streakBurn": "Serin ({n}) yanacak! ",
   "ringsLeft": "Az kaldı: {n} halka kaldı!",
   "retry": "Tekrar dene",
-  "devNote": "Geliştirme sürümü. Sesi açmak için tahtaya bir kez dokun.",
   "role.tut1": "Öğretici",
   "hint.tut1": "Bir halkayı parmağınla çevir. Boşluğunu komşu halkayla kesiştiği noktaya getir. Parlayan halka serbesttir: ona dokun.",
   "role.tut2": "Öğretici",
@@ -132,5 +131,15 @@
   "cos.board.night": "Gece",
   "cos.board.emerald": "Zümrüt",
   "cos.board.ocean": "Okyanus",
-  "cos.board.rose": "Gül"
+  "cos.board.rose": "Gül",
+  "music": "Müzik",
+  "restore": "Satın alımları geri yükle",
+  "restored": "Satın alımlar geri yüklendi.",
+  "nothingRestore": "Geri yüklenecek satın alım yok.",
+  "privacy": "Gizlilik",
+  "support": "Destek",
+  "gotIt": "Anladım",
+  "coachBoosters": "Takılırsan bunlar yardım eder: 💡 ipucu, ↶ geri al, ⊕ ekstra yuva, 🧲 mıknatıs. Her birinden birkaç tane bedava!",
+  "allDone": "Yeni bölümler yakında! Bu arada eski bir bölümü oynuyorsun.",
+  "newLevels": "{n} yeni bölüm geldi!"
 }

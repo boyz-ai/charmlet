@@ -26,7 +26,6 @@
   "streakBurn": "Rentetan menangmu ({n}) akan hilang! ",
   "ringsLeft": "Sedikit lagi: tinggal {n} cincin!",
   "retry": "Coba lagi",
-  "devNote": "Versi pengembangan. Ketuk papan sekali untuk menyalakan suara.",
   "role.tut1": "Tutorial",
   "hint.tut1": "Seret cincin untuk memutarnya. Arahkan celahnya ke titik silang dengan cincin di sebelahnya. Cincin yang bersinar sudah bebas: ketuk.",
   "role.tut2": "Tutorial",
@@ -132,5 +131,15 @@
   "cos.board.night": "Malam",
   "cos.board.emerald": "Zamrud",
   "cos.board.ocean": "Samudra",
-  "cos.board.rose": "Mawar"
+  "cos.board.rose": "Mawar",
+  "music": "Musik",
+  "restore": "Pulihkan pembelian",
+  "restored": "Pembelian dipulihkan.",
+  "nothingRestore": "Tidak ada pembelian untuk dipulihkan.",
+  "privacy": "Privasi",
+  "support": "Bantuan",
+  "gotIt": "Mengerti",
+  "coachBoosters": "Buntu? Ini membantu: 💡 petunjuk, ↶ batal, ⊕ slot ekstra, 🧲 magnet. Masing-masing ada beberapa gratis!",
+  "allDone": "Level baru segera hadir! Sementara itu, main ulang level lama.",
+  "newLevels": "{n} level baru sudah datang!"
 }

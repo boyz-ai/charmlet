@@ -46,6 +46,21 @@ export const PRODUCTS: Product[] = [
 export interface IAPService {
   /** Resolves true when the purchase went through. */
   buy(p: Product): Promise<boolean>;
+  /** One-time products the store says this player owns (Apple requires a restore button). */
+  restore(): Promise<ProductId[]>;
+}
+
+/** Give back one-time entitlements after a reinstall (no coins again: those were spent already). */
+export function restoreOwned(s: SaveData, ids: ProductId[]): number {
+  let n = 0;
+  for (const id of ids) {
+    const p = PRODUCTS.find(x => x.id === id);
+    if (!p?.once) continue;
+    if (!s.owned.includes(id)) { s.owned.push(id); n++; }
+    if (p.noAds) s.noAds = true;
+    s.paid = true;
+  }
+  return n;
 }
 
 /** Give the player what they bought. Any purchase removes forced ads for good (GDD). */
@@ -89,6 +104,14 @@ export class TestAds implements AdService {
   async showInterstitial(): Promise<void> { await this.d.ad(3, false); }
 }
 export class TestIAP implements IAPService {
+  /** pretend store account (kept apart from the game save, like a real store would be) */
+  private readonly key = 'charm.teststore';
   constructor(private d: TestDialog, private t: (k: string, v?: Record<string, string | number>) => string) {}
-  buy(p: Product): Promise<boolean> { return this.d.confirm(this.t('p.' + p.id), this.t('testBuyText', { price: p.price })); }
+  async buy(p: Product): Promise<boolean> {
+    const ok = await this.d.confirm(this.t('p.' + p.id), this.t('testBuyText', { price: p.price }));
+    if (ok && p.once) try { localStorage.setItem(this.key, JSON.stringify([...new Set([...this.owned(), p.id])])); } catch { /* ignore */ }
+    return ok;
+  }
+  async restore(): Promise<ProductId[]> { return this.owned(); }
+  private owned(): ProductId[] { try { return JSON.parse(localStorage.getItem(this.key) ?? '[]') as ProductId[]; } catch { return []; } }
 }

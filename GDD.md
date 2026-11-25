@@ -56,6 +56,9 @@ Every color also has a symbol (ruby = heart, sapphire = diamond, emerald = trian
 - Coins (soft currency): win 10 · hard 15 · super hard 25. +3 moves on the out-of-moves screen costs 60 coins (rewarded ad in M7).
 - Boosters: Undo 60 · Extra slot 90 · Magnet 120 coins after the 2 free uses. Magnet pulls every charm of the most common tray color; a level is won when all rings are out even if the Magnet left a partial color. Extra slot and Magnet can also rescue a full tray from the fail screen.
 
+## Live levels
+Every Monday a GitHub Actions workflow generates the next pack of 50 levels (tools/make-pack.cjs, same generator and solver), replays every solution in the tests and publishes it on GitHub Pages; the game downloads new packs, checks the SHA-256 and replays every level itself before appending it. After the last level the player replays finished levels until the next pack arrives.
+
 ## Languages
 English, Turkish, German, French, Spanish, Portuguese, Italian, Russian, Japanese, Korean, Simplified Chinese, Indonesian; device language is detected automatically. Translations are Claude's; native speakers should review the store texts of the main markets before launch.
 

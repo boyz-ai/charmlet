@@ -26,7 +26,6 @@
   "streakBurn": "Sua sequência ({n}) vai acabar! ",
   "ringsLeft": "Quase lá: faltam {n} aros!",
   "retry": "Tentar de novo",
-  "devNote": "Versão de desenvolvimento. Toque no tabuleiro uma vez para ativar o som.",
   "role.tut1": "Tutorial",
   "hint.tut1": "Arraste um aro para girá-lo. Leve a abertura até onde ele cruza um vizinho. Um aro brilhando está livre: toque nele.",
   "role.tut2": "Tutorial",
@@ -132,5 +131,15 @@
   "cos.board.night": "Noite",
   "cos.board.emerald": "Esmeralda",
   "cos.board.ocean": "Oceano",
-  "cos.board.rose": "Rosa"
+  "cos.board.rose": "Rosa",
+  "music": "Música",
+  "restore": "Restaurar compras",
+  "restored": "Compras restauradas.",
+  "nothingRestore": "Nenhuma compra para restaurar.",
+  "privacy": "Privacidade",
+  "support": "Suporte",
+  "gotIt": "Entendi",
+  "coachBoosters": "Travou? Eles ajudam: 💡 dica, ↶ desfazer, ⊕ espaço extra, 🧲 ímã. Você ganha alguns de cada grátis!",
+  "allDone": "Novos níveis em breve! Enquanto isso, jogue um antigo.",
+  "newLevels": "Chegaram {n} níveis novos!"
 }

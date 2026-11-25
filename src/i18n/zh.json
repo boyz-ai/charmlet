@@ -26,7 +26,6 @@
   "streakBurn": "你的连胜（{n}）要中断了！",
   "ringsLeft": "就差一点：还剩 {n} 个圆环！",
   "retry": "再试一次",
-  "devNote": "开发版。点一下棋盘即可开启声音。",
   "role.tut1": "教程",
   "hint.tut1": "拖动圆环来转动它。把缺口转到与相邻圆环的交叉处。发光的圆环已经自由：点它。",
   "role.tut2": "教程",
@@ -132,5 +131,15 @@
   "cos.board.night": "夜空",
   "cos.board.emerald": "翡翠",
   "cos.board.ocean": "海洋",
-  "cos.board.rose": "玫瑰"
+  "cos.board.rose": "玫瑰",
+  "music": "音乐",
+  "restore": "恢复购买",
+  "restored": "已恢复购买。",
+  "nothingRestore": "没有可恢复的购买。",
+  "privacy": "隐私",
+  "support": "支持",
+  "gotIt": "知道了",
+  "coachBoosters": "卡住了？它们能帮你：💡提示、↶撤销、⊕额外格、🧲磁铁。每种都送几个！",
+  "allDone": "新关卡即将上线！先重玩一关吧。",
+  "newLevels": "新增 {n} 个关卡！"
 }

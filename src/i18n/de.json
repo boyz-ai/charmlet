@@ -26,7 +26,6 @@
   "streakBurn": "Deine Serie ({n}) geht verloren! ",
   "ringsLeft": "Fast geschafft: noch {n} Ringe!",
   "retry": "Nochmal versuchen",
-  "devNote": "Entwicklerversion. Tippe einmal aufs Spielfeld, um den Ton zu aktivieren.",
   "role.tut1": "Tutorial",
   "hint.tut1": "Zieh an einem Ring, um ihn zu drehen. Bring seine Lücke an die Kreuzung mit dem Nachbarn. Ein leuchtender Ring ist frei: tippe ihn an.",
   "role.tut2": "Tutorial",
@@ -132,5 +131,15 @@
   "cos.board.night": "Nacht",
   "cos.board.emerald": "Smaragd",
   "cos.board.ocean": "Ozean",
-  "cos.board.rose": "Rose"
+  "cos.board.rose": "Rose",
+  "music": "Musik",
+  "restore": "Käufe wiederherstellen",
+  "restored": "Käufe wiederhergestellt.",
+  "nothingRestore": "Keine Käufe zum Wiederherstellen.",
+  "privacy": "Datenschutz",
+  "support": "Hilfe",
+  "gotIt": "Verstanden",
+  "coachBoosters": "Festgefahren? Die hier helfen: 💡 Tipp, ↶ Zurück, ⊕ Extra-Platz, 🧲 Magnet. Von jedem gibt es ein paar gratis!",
+  "allDone": "Neue Level kommen bald! Bis dahin: ein altes Level nochmal.",
+  "newLevels": "{n} neue Level sind da!"
 }

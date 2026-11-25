@@ -14,6 +14,9 @@ export interface SaveData {
   best: number;
   streak: number;
   sound: boolean;
+  music: boolean;
+  /** the booster bar was introduced */
+  seenBoosters: boolean;
   vibration: boolean;
   lang: Lang;
   /** false until the player finished the first launch (first launch skips the home screen) */
@@ -43,7 +46,7 @@ export interface SaveData {
 export interface SaveService { load(): SaveData; save(d: SaveData): void }
 
 export const defaultSave = (lang: Lang): SaveData =>
-  ({ level: 0, best: 0, streak: 0, sound: true, vibration: true, lang, seenHome: false,
+  ({ level: 0, best: 0, streak: 0, sound: true, music: true, seenBoosters: false, vibration: true, lang, seenHome: false,
     coins: 0, boosters: { hint: 3, undo: 2, slot: 2, magnet: 2 }, dailyStep: 0, dailyLast: null,
     paid: false, noAds: false, owned: [], playTime: 0, levelsSinceAd: 0,
     cos: { ring: 'ring.classic', charm: 'charm.classic', board: 'board.velvet', owned: [] } });
@@ -72,6 +75,8 @@ export class LocalSaveService implements SaveService {
         level: Number.isInteger(d.level) && d.level! >= 0 ? d.level! : base.level,
         streak: Number.isInteger(d.streak) && d.streak! >= 0 ? d.streak! : base.streak,
         sound: typeof d.sound === 'boolean' ? d.sound : base.sound,
+        music: typeof d.music === 'boolean' ? d.music : base.music,
+        seenBoosters: d.seenBoosters === true,
         vibration: typeof d.vibration === 'boolean' ? d.vibration : base.vibration,
         lang: isLang(d.lang) ? d.lang : base.lang,
         seenHome: d.seenHome === true,

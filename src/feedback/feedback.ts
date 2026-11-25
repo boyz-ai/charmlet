@@ -87,6 +87,25 @@ export class FeedbackManager {
     [784, 988, 1175, 1568].forEach((f, i) => this.bell(f * k, 0.5, 0.055, i * 0.055));
     this.hap(h => h.impact('heavy'));
   }
+  // ---------- background music: a quiet, endless music-box loop made on the fly ----------
+  music = true;
+  private musicTimer = 0;
+  private beat = 0;
+  /** Start (or keep) the music; call after unlock(). */
+  startMusic(): void {
+    if (this.musicTimer || !this.ac) return;
+    const CHORDS = [[262, 330, 392], [220, 262, 330], [175, 220, 262], [196, 247, 294]]; // C · Am · F · G
+    const step = (): void => {
+      if (!this.music || !this.sound || !this.ac || this.ac.state !== 'running') { this.beat++; return; }
+      const chord = CHORDS[Math.floor(this.beat / 8) % CHORDS.length], b = this.beat % 8;
+      if (b === 0) chord.forEach(f => this.tone(f / 2, 2.6, 'sine', 0.018, 0, true));            // soft pad
+      const pattern = [0, 2, 1, 2, 0, 1, 2, 1];
+      if (b !== 7) this.bell(chord[pattern[b]] * 2, 0.9, 0.016);                                 // music box
+      this.beat++;
+    };
+    this.musicTimer = window.setInterval(step, 375);
+  }
+  stopMusic(): void { clearInterval(this.musicTimer); this.musicTimer = 0; }
   whoosh(): void { this.noise(0.35, 300, 0.09, 0, 3000); this.bell(1760, 0.4, 0.04, 0.2); }
   boom(): void { this.tone(110, 0.5, 'sine', 0.2, 0, false, 40); this.noise(0.4, 600, 0.12, 0, 120); this.hap(h => h.impact('heavy')); }
   win(): void {
