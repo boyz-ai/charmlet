@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.mucahitkurkaya.charmunlock',
-  appName: 'Charm Unlock',
+  appId: 'com.mucahitkurkaya.charmlet',
+  appName: 'Charmlet',
   webDir: 'dist',
   ios: { contentInset: 'never', backgroundColor: '#2a0d24' },
   plugins: {

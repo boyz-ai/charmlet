@@ -1,4 +1,4 @@
-# BAŞLA — Charm Çözücü projesi (M1 tamamlandı)
+# BAŞLA — Charmlet projesi (M1 tamamlandı)
 
 M1'i Claude yaptı: prototip gerçek bir proje yapısına taşındı (TypeScript + Vite), kurallar ayrı modülde ve 11 otomatik testle korunuyor.
 

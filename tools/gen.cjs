@@ -1,4 +1,4 @@
-// Charm Unlock — level generator + solver (v2: 100 levels, 5 mechanics).
+// Charmlet — level generator + solver (v2: 100 levels, 5 mechanics).
 // Rules MUST match src/core/game.ts. Run: node tools/gen.cjs [from] [to] (1 100 → levels/levels.json), then node tools/solve-all.cjs
 // A "move" = rotating one ring. Releasing a free ring is free. Solver = 0-1 BFS on
 // (gone mask, tray counts, per-ring gap coverage signature, ice rotations used).

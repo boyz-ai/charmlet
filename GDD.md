@@ -1,6 +1,6 @@
-# Charm Unlock — One-Page GDD (v1.0)
+# Charmlet — One-Page GDD (v1.0)
 
-Working title: **Charm Unlock** (TR: Charm Çözücü). Final store name to be checked for trademark/ASO before launch.
+Store name: **Charmlet** (subtitle: Ring Untangle Puzzle). Previous working titles: Charm Unlock / Charm Çözücü. Renamed Nov 2026 to avoid confusion with "Charm Uncovered" and the many "Charm …" match-3 games.
 
 ## Pitch
 A vertical, one-thumb hybrid-casual puzzle: rotate interlocked charm-bracelet rings so their gaps line up, free them one by one, and drop each ring's charm into a 5-slot tray where 3 of the same color clear. Built on the proven "Rotate Rings" mechanic, with a tray/queue economy (Cube Land-style) that the reference game lacks.
