@@ -141,5 +141,8 @@
   "gotIt": "Verstanden",
   "coachBoosters": "Festgefahren? Die hier helfen: 💡 Tipp, ↶ Zurück, ⊕ Extra-Platz, 🧲 Magnet. Von jedem gibt es ein paar gratis!",
   "allDone": "Neue Level kommen bald! Bis dahin: ein altes Level nochmal.",
-  "newLevels": "{n} neue Level sind da!"
+  "newLevels": "{n} neue Level sind da!",
+  "noAd": "Gerade keine Werbung verfügbar, versuch es gleich nochmal.",
+  "soon": "Bald",
+  "privacyOptions": "Datenschutzoptionen"
 }

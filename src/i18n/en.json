@@ -141,5 +141,8 @@
   "gotIt": "Got it",
   "coachBoosters": "Stuck? These help: 💡 hint, ↶ undo, ⊕ extra slot, 🧲 magnet. You get a few of each for free!",
   "allDone": "New levels are coming soon! Until then, enjoy a replay.",
-  "newLevels": "{n} new levels just arrived!"
+  "newLevels": "{n} new levels just arrived!",
+  "noAd": "No ad available right now, try again soon.",
+  "soon": "Soon",
+  "privacyOptions": "Privacy options"
 }

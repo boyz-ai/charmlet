@@ -141,5 +141,8 @@
   "gotIt": "Compris",
   "coachBoosters": "Bloqué ? Ils t’aident : 💡 indice, ↶ annuler, ⊕ place en plus, 🧲 aimant. Quelques-uns de chaque sont offerts !",
   "allDone": "De nouveaux niveaux arrivent bientôt ! En attendant, rejoue un ancien.",
-  "newLevels": "{n} nouveaux niveaux viennent d’arriver !"
+  "newLevels": "{n} nouveaux niveaux viennent d’arriver !",
+  "noAd": "Aucune pub disponible pour l’instant, réessaie bientôt.",
+  "soon": "Bientôt",
+  "privacyOptions": "Options de confidentialité"
 }

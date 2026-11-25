@@ -13,7 +13,7 @@ export class FeedbackManager {
   vibration = true;
   private ac: AudioContext | null = null;
 
-  constructor(private haptics: Haptics = browserHaptics) {}
+  constructor(public haptics: Haptics = browserHaptics) {}
 
   /** Must be called from a user gesture (browsers block audio before that). */
   unlock(): void {

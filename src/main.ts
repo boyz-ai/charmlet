@@ -4,6 +4,8 @@ import '@fontsource/fredoka/600.css';
 import { Game } from './core/game';
 import { Renderer } from './render/renderer';
 import { HomeScene } from './render/home';
+import { isNative, mirrorSave, nativeChrome, nativeHaptics, restoreSave } from './native/native';
+import { AdMobAds } from './native/admob';
 import { attachInput } from './input/input';
 import { FeedbackManager } from './feedback/feedback';
 import { LAYOUTS, LEVELS } from './levels/levels';
@@ -22,9 +24,10 @@ const cv = $<HTMLCanvasElement>('c');
 const fb = new FeedbackManager();
 const renderer = new Renderer(cv);
 const homeScene = new HomeScene($<HTMLCanvasElement>('homeCv'));
+await restoreSave(); // phone app: bring back the save if iOS cleared the web storage
 const store = new LocalSaveService();
 const save: SaveData = store.load();
-const persist = (): void => store.save(save);
+const persist = (): void => { store.save(save); mirrorSave(); };
 
 appendPacks(LEVELS, cachedPacks()); // weekly packs downloaded earlier
 let level = Math.min(save.level, LEVELS.length - 1);
@@ -38,7 +41,10 @@ let fails = 0;
 let replay = false;
 // ads + purchases (test implementations until the native build)
 const dialog = new TestDialog($('td'), t);
-const ads: AdService = new TestAds(dialog);
+const admob = isNative() ? new AdMobAds() : null;
+const ads: AdService = admob ?? new TestAds(dialog);
+/** Real store purchases arrive with M7; until then the phone app shows the shop as "coming soon". */
+const IAP_READY = !isNative();
 const iap: IAPService = new TestIAP(dialog, t);
 let lastAdS = -1e9;
 const resetIdle = (): void => { idle = 0; renderer.hint = null; };
@@ -156,7 +162,7 @@ function onWin(): void {
   };
   if (adNext) show(t('winTitle'), text, last ? t('again') : t('next'), () => void next());
   else show(t('winTitle'), text, last ? t('again') : t('next'), () => playNext(), t('doubleCoins', { n: coins }), async () => {
-    if (await ads.showRewarded('double')) { save.coins += coins; persist(); hud(); toast(t('doubled')); }
+    if (await ads.showRewarded('double')) { save.coins += coins; persist(); hud(); toast(t('doubled')); } else if (isNative()) toast(t('noAd'));
     playNext();
   });
 }
@@ -178,7 +184,7 @@ function onLose(reason: 'tray' | 'moves' | 'bomb'): void {
     const left = game.rings.filter(r => !r.gone).length;
     const cont = (): void => { game.addMoves(CONTINUE_MOVES); hideOverlay(); hud(); };
     // coins first; without coins a rewarded ad will go here (M7) — for now a free test button
-    const watch = async (): Promise<void> => { if (await ads.showRewarded('continue')) cont(); };
+    const watch = async (): Promise<void> => { if (await ads.showRewarded('continue')) cont(); else if (isNative()) toast(t('noAd')); };
     if (save.coins >= CONTINUE_PRICE)
       show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('watchMoves'), () => void watch(),
         t('continueCoins', { n: CONTINUE_MOVES, p: CONTINUE_PRICE }), () => { if (buyContinue(save)) { persist(); cont(); } }, t('retry'), retry);
@@ -234,7 +240,7 @@ function openShop(): void {
   $('shopList').innerHTML = PRODUCTS.map(p => {
     const can = canBuy(save, p);
     return `<li class="${p.id === 'coins_l' ? 'best' : ''}"><div class="pi"><b>${t('p.' + p.id)}${p.id === 'coins_l' ? ' · ' + t('bestValue') : ''}</b><span>${t('pd.' + p.id)}</span></div>` +
-      `<button data-p="${p.id}" ${can ? '' : 'disabled'}>${can ? p.price : t('owned1')}</button></li>`;
+      `<button data-p="${p.id}" ${can && IAP_READY ? '' : 'disabled'}>${!can ? t('owned1') : IAP_READY ? p.price : t('soon')}</button></li>`;
   }).join('');
   $('shop').classList.add('on');
 }
@@ -242,7 +248,7 @@ function closeShop(): void { $('shop').classList.remove('on'); hud(); homeTexts(
 $('shopList').addEventListener('click', async e => {
   const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-p]');
   const p = PRODUCTS.find(x => x.id === btn?.dataset.p);
-  if (!p || !canBuy(save, p)) return;
+  if (!p || !canBuy(save, p) || !IAP_READY) return;
   fb.unlock();
   if (await iap.buy(p)) { grant(save, p); persist(); fb.win(); toast(t('bought')); openShop(); }
 });
@@ -389,6 +395,8 @@ $('restoreBtn').addEventListener('click', async () => {
   persist(); toast(n > 0 || save.paid ? t('restored') : t('nothingRestore'));
 });
 $('coachOk').addEventListener('click', () => $('coach').classList.remove('on'));
+$('privacyOpts').addEventListener('click', () => void admob?.showPrivacyOptions());
+if (!IAP_READY) $('restoreBtn').style.display = 'none';
 $<HTMLInputElement>('optVib').addEventListener('change', e => { save.vibration = fb.vibration = (e.target as HTMLInputElement).checked; persist(); });
 $('langSel').innerHTML = LANGS.map(l => `<option value="${l}">${LANG_NAMES[l]}</option>`).join('');
 $('langSel').addEventListener('change', e => setLanguage((e.target as HTMLSelectElement).value as Lang));
@@ -407,6 +415,10 @@ load(level);
 applyTexts();
 // First launch goes straight into level 1; later launches open the home screen.
 applyLook();
+// phone app: real haptics, status bar, splash, then the ad consent flow (EU form → iOS tracking prompt)
+void nativeHaptics().then(h => { if (h) fb.haptics = h; });
+void nativeChrome();
+if (admob) void admob.start().then(async () => { if (await admob.privacyOptionsRequired()) $('privacyOpts').style.display = ''; });
 // new weekly levels: download in the background, add them when they are verified
 void fetchNewPacks(LEVELS.length).then(p => {
   const n = appendPacks(LEVELS, p);

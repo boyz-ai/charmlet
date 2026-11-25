@@ -141,5 +141,8 @@
   "gotIt": "Mengerti",
   "coachBoosters": "Buntu? Ini membantu: 💡 petunjuk, ↶ batal, ⊕ slot ekstra, 🧲 magnet. Masing-masing ada beberapa gratis!",
   "allDone": "Level baru segera hadir! Sementara itu, main ulang level lama.",
-  "newLevels": "{n} level baru sudah datang!"
+  "newLevels": "{n} level baru sudah datang!",
+  "noAd": "Belum ada iklan sekarang, coba lagi nanti.",
+  "soon": "Segera",
+  "privacyOptions": "Opsi privasi"
 }

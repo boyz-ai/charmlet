@@ -141,5 +141,8 @@
   "gotIt": "Entendido",
   "coachBoosters": "¿Atascado? Esto ayuda: 💡 pista, ↶ deshacer, ⊕ hueco extra, 🧲 imán. ¡Tienes algunos gratis de cada uno!",
   "allDone": "¡Pronto llegan niveles nuevos! Mientras, juega uno anterior.",
-  "newLevels": "¡Han llegado {n} niveles nuevos!"
+  "newLevels": "¡Han llegado {n} niveles nuevos!",
+  "noAd": "No hay anuncios ahora, inténtalo pronto.",
+  "soon": "Pronto",
+  "privacyOptions": "Opciones de privacidad"
 }

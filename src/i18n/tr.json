@@ -141,5 +141,8 @@
   "gotIt": "Anladım",
   "coachBoosters": "Takılırsan bunlar yardım eder: 💡 ipucu, ↶ geri al, ⊕ ekstra yuva, 🧲 mıknatıs. Her birinden birkaç tane bedava!",
   "allDone": "Yeni bölümler yakında! Bu arada eski bir bölümü oynuyorsun.",
-  "newLevels": "{n} yeni bölüm geldi!"
+  "newLevels": "{n} yeni bölüm geldi!",
+  "noAd": "Şu an reklam yok, birazdan tekrar dene.",
+  "soon": "Yakında",
+  "privacyOptions": "Gizlilik seçenekleri"
 }

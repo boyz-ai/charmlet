@@ -141,5 +141,8 @@
   "gotIt": "Entendi",
   "coachBoosters": "Travou? Eles ajudam: 💡 dica, ↶ desfazer, ⊕ espaço extra, 🧲 ímã. Você ganha alguns de cada grátis!",
   "allDone": "Novos níveis em breve! Enquanto isso, jogue um antigo.",
-  "newLevels": "Chegaram {n} níveis novos!"
+  "newLevels": "Chegaram {n} níveis novos!",
+  "noAd": "Nenhum anúncio agora, tente de novo em breve.",
+  "soon": "Em breve",
+  "privacyOptions": "Opções de privacidade"
 }

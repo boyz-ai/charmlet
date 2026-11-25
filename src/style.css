@@ -176,3 +176,7 @@ header h1{font-size:clamp(19px,5.6vw,24px)}
 .coach.on{display:flex}.coach p{margin:0;font-size:16px}
 .coach::after{content:"";position:absolute;bottom:-10px;left:50%;margin-left:-9px;border:9px solid transparent;border-bottom:0;border-top-color:#e3c473}
 .coach button{min-height:40px;background:#e3c473;color:#2a1426}
+
+/* phone app: keep clear of the notch and the home bar */
+.wrap{padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(28px,env(safe-area-inset-bottom))}
+.ov.home{padding-bottom:max(28px,env(safe-area-inset-bottom))}
