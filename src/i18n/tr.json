@@ -72,5 +72,7 @@
   "no.undo": "Geri alınacak çevirme yok",
   "no.slot": "Ekstra yuva bu seviyede zaten açık",
   "no.magnet": "Tepside charm yok",
-  "needCoins": "{n} altın daha lazım"
+  "needCoins": "{n} altın daha lazım",
+  "b.hint": "İpucu",
+  "no.hint": "Şu an gösterilecek ipucu yok"
 }

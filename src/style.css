@@ -59,3 +59,6 @@ h1{font-size:clamp(20px,6vw,26px);white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 .ov .ghost.glow{border-color:#e3c473;background:rgba(227,196,115,.22)}
 .days li span{color:#f1dcea}
+.bst.glow{background:rgba(227,196,115,.28);box-shadow:0 0 0 3px rgba(227,196,115,.45)}
+@media (max-width:380px){.bst{font-size:12px}}
+.boosters{gap:6px}

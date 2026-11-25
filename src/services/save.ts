@@ -12,7 +12,7 @@ export interface SaveData {
   /** soft currency */
   coins: number;
   /** owned booster uses */
-  boosters: { undo: number; slot: number; magnet: number };
+  boosters: { hint: number; undo: number; slot: number; magnet: number };
   /** next step (0–6) of the daily reward track */
   dailyStep: number;
   /** local day (YYYY-MM-DD) the daily reward was last claimed */
@@ -23,7 +23,7 @@ export interface SaveService { load(): SaveData; save(d: SaveData): void }
 
 export const defaultSave = (lang: Lang): SaveData =>
   ({ level: 0, streak: 0, sound: true, vibration: true, lang, seenHome: false,
-    coins: 0, boosters: { undo: 2, slot: 2, magnet: 2 }, dailyStep: 0, dailyLast: null });
+    coins: 0, boosters: { hint: 3, undo: 2, slot: 2, magnet: 2 }, dailyStep: 0, dailyLast: null });
 
 const nat = (v: unknown, d: number): number => (Number.isInteger(v) && (v as number) >= 0 ? (v as number) : d);
 
@@ -50,6 +50,7 @@ export class LocalSaveService implements SaveService {
         seenHome: d.seenHome === true,
         coins: nat(d.coins, base.coins),
         boosters: {
+          hint: nat(d.boosters?.hint, base.boosters.hint),
           undo: nat(d.boosters?.undo, base.boosters.undo),
           slot: nat(d.boosters?.slot, base.boosters.slot),
           magnet: nat(d.boosters?.magnet, base.boosters.magnet),

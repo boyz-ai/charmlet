@@ -72,5 +72,7 @@
   "no.undo": "No turn to undo",
   "no.slot": "Extra slot is already open this level",
   "no.magnet": "The tray is empty",
-  "needCoins": "You need {n} more coins"
+  "needCoins": "You need {n} more coins",
+  "b.hint": "Hint",
+  "no.hint": "No hint right now"
 }

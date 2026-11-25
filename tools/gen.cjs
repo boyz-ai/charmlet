@@ -18,6 +18,7 @@ const LAYOUTS = {
   row3: { r: 60, pts: [[110, 210], [180, 210], [250, 210]] },
   g23: { r: 58, pts: [[95, 170], [180, 170], [265, 170], [95, 270], [180, 270], [265, 270]] },
   zig6: { r: 56, pts: [[80, 150], [150, 200], [220, 150], [290, 200], [150, 290], [220, 290]] },
+  zig6m: { r: 56, pts: [[280, 150], [210, 200], [140, 150], [70, 200], [210, 290], [140, 290]] },
   tri6: { r: 54, pts: [[180, 130], [140, 200], [220, 200], [100, 270], [180, 270], [260, 270]] },
   hex6: { r: 52, pts: hex },
   g33: { r: 54, pts: [[100, 120], [180, 120], [260, 120], [100, 210], [180, 210], [260, 210], [100, 300], [180, 300], [260, 300]] },
@@ -133,12 +134,34 @@ function planFor(n) { // n = level number 1..100
   return { role, layout, ncol, mech, range: role.startsWith('new') ? [3, 5] : [range[0] + (role === 'relief' || role === 'bonus' ? 0 : lift), range[1] + lift], slack: SLACK[role.startsWith('new') ? 'intro' : role] };
 }
 
+// Levels 101+: try a fixed number of candidates with a smaller solver budget and keep the one closest to the
+// target difficulty (levels 1–100 keep the original search so they stay byte-identical).
+const FAST_RANGE = { normal: [4, 6], hard: [5, 8], super: [6, 9], relief: [2, 3], bonus: [2, 3] };
+function fastPick(n, plan) {
+  const range = FAST_RANGE[plan.role] ?? plan.range;
+  let best = null, bestD = Infinity;
+  const tough = plan.role === 'hard' || plan.role === 'super';
+  const limit = tough ? 100000 : plan.ncol === 3 ? 40000 : 25000;
+  for (let t = 0; t < (tough ? 70 : 60); t++) {
+    if (t % 30 === 29) plan.layout = plan.ncol === 3 ? pick(L9) : pick(L6);
+    const spec = randomSpec(plan.layout, plan.ncol, plan.mech);
+    const r = solve(build(spec), limit);
+    if (!r || !isFinite(r.moves) || r.moves < 2) continue;
+    const d = r.moves < range[0] ? range[0] - r.moves : r.moves > range[1] ? r.moves - range[1] : 0;
+    if (d < bestD) { bestD = d; best = { ...spec, role: plan.role, minMoves: r.moves, moves: r.moves + plan.slack }; }
+    if (d === 0) break;
+  }
+  if (best) best.sol = solve(build(best), limit, true).path; // store the verified solution right away
+  return best;
+}
+
 if (require.main === module) {
   const A = Number(process.argv[2] || 1), B = Number(process.argv[3] || 100), out = [];
   for (let n = A; n <= B; n++) {
     seed = 1000 + n * 7919; // each level has its own seed → workers can split ranges
     const plan = planFor(n);
     let found = null;
+    if (n > 100) { found = fastPick(n, plan); }
     for (let t = 0; t < 300 && !found; t++) {
       const spec = randomSpec(plan.layout, plan.ncol, plan.mech);
       const lv = build(spec);
@@ -155,7 +178,7 @@ if (require.main === module) {
   }
   const fs = require('fs');
   if (A === 1 && B === 100) fs.writeFileSync(__dirname + '/../levels/levels.json', JSON.stringify(out).replace(/\},\{/g, '},\n{'));
-  else fs.writeFileSync(`/tmp/levels-${A}-${B}.json`, JSON.stringify(out));
+  else fs.writeFileSync(require('os').tmpdir() + `/levels-${A}-${B}.json`, JSON.stringify(out));
   console.error('wrote', out.length, 'levels');
 }
 module.exports = { LAYOUTS, build, solve, planFor };

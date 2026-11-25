@@ -8,7 +8,7 @@ import { LocalSaveService, type Lang, type SaveData } from './services/save';
 import { setLang, t } from './i18n';
 import {
   BOOSTERS, BOOSTER_PRICE, CONTINUE_MOVES, CONTINUE_PRICE, DAILY, buyContinue, claimDaily, dailyAvailable, dayKey,
-  refundBooster, spendBooster, streakBonus, winCoins, type Booster,
+  refundBooster, spendBooster, streakBonus, winCoins, autoHint, HINT_NUDGE_FAILS, type Booster,
 } from './meta/meta';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
@@ -24,6 +24,8 @@ let failedOnce = false;
 /** seconds since the player last touched the board (drives the ghost-hand hint) */
 let idle = 0;
 const TUTORIAL_LEVELS = 3, TUTORIAL_HINT_DELAY = 0.8, HINT_DELAY = 5;
+/** losses on the current level (glows the Hint button after HINT_NUDGE_FAILS) */
+let fails = 0;
 const resetIdle = (): void => { idle = 0; renderer.hint = null; };
 let game!: Game;
 /** streak-bonus message waiting for the home screen to close */
@@ -60,6 +62,7 @@ function boosterTexts(): void {
     btn.setAttribute('aria-label', `${t('b.' + b)}: ${n > 0 ? t('owned', { n }) : t('price', { n: BOOSTER_PRICE[b] })}`);
     btn.setAttribute('aria-disabled', String(!canUse(b)));
   }
+  $('bHint').classList.toggle('glow', fails >= HINT_NUDGE_FAILS && game?.state === 'play');
 }
 let toastTimer = 0;
 function toast(msg: string): void {
@@ -73,7 +76,7 @@ function setLanguage(l: Lang): void { save.lang = l; setLang(l); persist(); appl
 // ---------- game ----------
 function load(n: number, keepFail = false): void {
   level = n;
-  if (!keepFail) failedOnce = false;
+  if (!keepFail) { failedOnce = false; fails = 0; }
   const spec = LEVELS[n];
   game = new Game(spec, LAYOUTS[spec.layout]);
   renderer.reset();
@@ -126,6 +129,7 @@ function onWin(): void {
 function onLose(reason: 'tray' | 'moves'): void {
   fb.lose();
   failedOnce = true;
+  fails++;
   const retry = (): void => { save.streak = 0; persist(); load(level, true); };
   const burn = save.streak > 0 ? t('streakBurn', { n: save.streak }) : '';
   if (reason === 'tray') {
@@ -168,7 +172,7 @@ function closeSettings(): void { $('settings').classList.remove('on'); boosterTe
 // ---------- daily reward ----------
 const rewardText = (i: number): string => {
   const r = DAILY[i];
-  const icons: Record<Booster, string> = { undo: '↶', slot: '⊕', magnet: '🧲' };
+  const icons: Record<Booster, string> = { hint: '💡', undo: '↶', slot: '⊕', magnet: '🧲' };
   return `${r.coins}` + Object.keys(r.boosters ?? {}).map(b => ' ' + icons[b as Booster]).join('');
 };
 function openDaily(): void {
@@ -197,6 +201,7 @@ function claimToday(): void {
 const overlayOpen = (): boolean => ['home', 'settings', 'daily'].some(id => $(id).classList.contains('on'));
 function canUse(b: Booster): boolean {
   if (!game || overlayOpen()) return false;
+  if (b === 'hint') return game.state === 'play' && !renderer.hint && game.suggest() !== null;
   return b === 'undo' ? game.canUndo() : b === 'slot' ? game.canAddSlot() : game.canMagnet();
 }
 function useBooster(b: Booster): void {
@@ -205,7 +210,9 @@ function useBooster(b: Booster): void {
   if (!canUse(b)) { fb.locked(); toast(t('no.' + b)); return; }
   const how = spendBooster(save, b);
   if (!how) { fb.locked(); toast(t('needCoins', { n: BOOSTER_PRICE[b] - save.coins })); return; }
-  const ok = b === 'undo' ? game.undo() : b === 'slot' ? game.addSlot() : game.magnet();
+  let ok: boolean;
+  if (b === 'hint') { renderer.hint = game.suggest(); ok = renderer.hint !== null; idle = 0; }
+  else ok = b === 'undo' ? game.undo() : b === 'slot' ? game.addSlot() : game.magnet();
   if (!ok) refundBooster(save, b, how);
   persist();
   if (game.state === 'play') hideOverlay();
@@ -251,7 +258,7 @@ function frame(now: number): void {
   if (game.state === 'play' && !blocked) {
     idle += dt;
     const delay = level < TUTORIAL_LEVELS ? TUTORIAL_HINT_DELAY : HINT_DELAY;
-    if (idle >= delay && !renderer.hint) renderer.hint = game.suggest();
+    if (autoHint(level, LEVELS[level].role) && idle >= delay && !renderer.hint) renderer.hint = game.suggest();
   } else if (renderer.hint) resetIdle();
   renderer.update(dt);
   renderer.draw(game, (now - t0) / 1000, game.state === 'play');

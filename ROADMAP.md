@@ -32,6 +32,8 @@ Implement the new mechanics from GDD (fixed ring, twin-gap ring, lock ring, ice 
 Implement GDD Meta: win streak with +2 moves bonus at 3+, streak warning on the fail screen, and the flexible daily reward (3 of 7 days). Coins as soft currency. Boosters: Undo, Extra slot, Magnet (first 2 free).
 ```
 
+## M5.1 — DONE by Claude: Hint booster (auto hints only on teaching levels) and 1000 solver-verified levels
+
 ## M6 — Capacitor + Android build (1–2 days)
 ```
 Add Capacitor (Android first). Wire Capacitor Haptics into FeedbackManager and Capacitor Preferences into SaveService. Explain step by step how I install Android Studio on Windows and run the app on my Android test phone.

@@ -74,8 +74,8 @@ describe('stuck detection', () => {
   });
 });
 
-describe('100 shipped levels', () => {
-  it('there are 100 levels', () => expect(LEVELS.length).toBe(100));
+describe('1000 shipped levels', () => {
+  it('there are 1000 levels', () => expect(LEVELS.length).toBe(1000));
   it.each(LEVELS.map((_, i) => i))('level %i is won by replaying its verified solution in the real game rules', n => {
     const spec = LEVELS[n];
     const g = mk(spec);

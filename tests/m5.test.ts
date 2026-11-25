@@ -5,7 +5,7 @@ import { LAYOUTS, LEVELS, type LevelSpec } from '../src/levels/levels';
 import { LocalSaveService, defaultSave } from '../src/services/save';
 import {
   BOOSTER_PRICE, CONTINUE_PRICE, DAILY, buyContinue, claimDaily, dailyAvailable, dayKey, refundBooster, spendBooster,
-  streakBonus, winCoins,
+  streakBonus, winCoins, autoHint,
 } from '../src/meta/meta';
 
 const row3 = (extra: Partial<LevelSpec> = {}): LevelSpec =>
@@ -145,7 +145,7 @@ describe('save migration', () => {
     const s = new LocalSaveService({ getItem: k => data[k] ?? null, setItem: (k, v) => { data[k] = v; } }).load();
     expect(s.level).toBe(7);
     expect(s.coins).toBe(0);
-    expect(s.boosters).toEqual({ undo: 2, slot: 2, magnet: 2 });
+    expect(s.boosters).toEqual({ hint: 3, undo: 2, slot: 2, magnet: 2 });
     expect(s.dailyLast).toBe(null);
   });
 });
@@ -162,5 +162,22 @@ describe('shipped levels still solve with undo history in place', () => {
     const before = g.moves;
     while (g.undo()) { /* undo all */ }
     expect(g.moves).toBeGreaterThanOrEqual(before);
+  });
+});
+
+describe('hints', () => {
+  it('the ghost hand appears by itself only on teaching levels', () => {
+    expect(autoHint(0, 'tut1')).toBe(true);
+    expect(autoHint(2, 'new_pin')).toBe(true);
+    expect(autoHint(10, 'new_fixed')).toBe(true);
+    expect(autoHint(11, 'normal')).toBe(false);
+    expect(autoHint(48, 'super')).toBe(false);
+  });
+  it('3 free hints, then 40 coins', () => {
+    const s = defaultSave('tr');
+    for (let k = 0; k < 3; k++) expect(spendBooster(s, 'hint')).toBe('owned');
+    expect(spendBooster(s, 'hint')).toBe(null);
+    s.coins = BOOSTER_PRICE.hint;
+    expect(spendBooster(s, 'hint')).toBe('coins');
   });
 });

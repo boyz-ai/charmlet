@@ -2,13 +2,14 @@
 // Pure functions on SaveData so everything here is unit-tested without the DOM.
 import type { SaveData } from '../services/save';
 
-export type Booster = 'undo' | 'slot' | 'magnet';
-export const BOOSTERS: Booster[] = ['undo', 'slot', 'magnet'];
+export type Booster = 'hint' | 'undo' | 'slot' | 'magnet';
+export const BOOSTERS: Booster[] = ['hint', 'undo', 'slot', 'magnet'];
 
-/** Every booster starts with 2 free uses. */
+/** Every booster starts with 2 free uses (the hint with 3). */
 export const FREE_BOOSTERS = 2;
+export const FREE_HINTS = 3;
 /** Coin price of one booster use once the free ones are gone. */
-export const BOOSTER_PRICE: Record<Booster, number> = { undo: 60, slot: 90, magnet: 120 };
+export const BOOSTER_PRICE: Record<Booster, number> = { hint: 40, undo: 60, slot: 90, magnet: 120 };
 /** Coin price of +3 moves on the out-of-moves screen (a rewarded ad replaces this in M7). */
 export const CONTINUE_PRICE = 60;
 export const CONTINUE_MOVES = 3;
@@ -17,6 +18,14 @@ export const CONTINUE_MOVES = 3;
 export const STREAK_BONUS_AT = 3;
 export const STREAK_BONUS_MOVES = 2;
 export const streakBonus = (streak: number): number => (streak >= STREAK_BONUS_AT ? STREAK_BONUS_MOVES : 0);
+
+/**
+ * The ghost hand appears by itself only where a rule is being taught: the tutorial levels and the level
+ * that introduces a new ring type. Everywhere else the player asks for it with the Hint booster.
+ */
+export const autoHint = (levelIndex: number, role: string): boolean => levelIndex < 3 || role.startsWith('new_');
+/** After this many losses on the same level the Hint button glows (it never solves by itself). */
+export const HINT_NUDGE_FAILS = 2;
 
 /** Coins for winning a level (harder roles pay more). */
 export function winCoins(role: string): number {
