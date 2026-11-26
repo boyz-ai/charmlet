@@ -7,6 +7,7 @@ import { HomeScene } from './render/home';
 import { isNative, mirrorSave, nativeChrome, nativeHaptics, restoreSave } from './native/native';
 import { AdMobAds } from './native/admob';
 import { maybeAskReview } from './native/review';
+import { StoreIAP } from './native/storekit';
 import { startAnalytics, track } from './services/analytics';
 import { ADMOB } from './config';
 import { attachInput } from './input/input';
@@ -48,7 +49,7 @@ const dialog = new TestDialog($('td'), t);
 const admob = isNative() ? new AdMobAds() : null;
 const ads: AdService = admob ?? new TestAds(dialog);
 /** Real store purchases arrive with M7; until then the phone app shows the shop as "coming soon". */
-const IAP_READY = !isNative();
+const IAP_READY = true; // web build: test store; iPhone: real App Store purchases (StoreKit)
 /** Rewarded ad + analytics: was it offered and actually shown? */
 async function rewarded(place: 'double' | 'continue'): Promise<boolean> {
   const ok = await ads.showRewarded(place);
@@ -58,7 +59,11 @@ async function rewarded(place: 'double' | 'continue'): Promise<boolean> {
 /** While test ads are on, say why no ad came (to fix setup problems); players of the store build only see the friendly text. */
 const noAdToast = (): void => toast(t('noAd') + (ADMOB.testing && admob?.lastError ? ` [${admob.lastError}]` : ''));
 if (isNative()) document.getElementById('testNote')?.remove(); // the web test note does not apply to the phone app
-const iap: IAPService = new TestIAP(dialog, t);
+/** A purchase the store finished later (e.g. approved by a parent): give it and say thanks. */
+const lateGrant = (p: (typeof PRODUCTS)[number]): void => { track('purchase', { product: p.id, late: true }); grant(save, p); persist(); hud(); toast(t('bought')); };
+const appStore = isNative() ? new StoreIAP(lateGrant) : null;
+const iap: IAPService = appStore ?? new TestIAP(dialog, t);
+const priceOf = (p: (typeof PRODUCTS)[number]): string => appStore?.price(p) ?? p.price;
 let lastAdS = -1e9;
 const resetIdle = (): void => { idle = 0; renderer.hint = null; };
 let game!: Game;
@@ -269,7 +274,7 @@ function openShop(): void {
   $('shopList').innerHTML = PRODUCTS.map(p => {
     const can = canBuy(save, p);
     return `<li class="${p.id === 'coins_l' ? 'best' : ''}"><div class="pi"><b>${t('p.' + p.id)}${p.id === 'coins_l' ? ' · ' + t('bestValue') : ''}</b><span>${t('pd.' + p.id)}</span></div>` +
-      `<button data-p="${p.id}" ${can && IAP_READY ? '' : 'disabled'}>${!can ? t('owned1') : IAP_READY ? p.price : t('soon')}</button></li>`;
+      `<button data-p="${p.id}" ${can && IAP_READY ? '' : 'disabled'}>${!can ? t('owned1') : IAP_READY ? priceOf(p) : t('soon')}</button></li>`;
   }).join('');
   $('shop').classList.add('on');
 }
@@ -282,6 +287,7 @@ $('shopList').addEventListener('click', async e => {
   if (!canBuy(save, p) || !IAP_READY) return;
   fb.unlock();
   if (await iap.buy(p)) { track('purchase', { product: p.id }); grant(save, p); persist(); fb.win(); toast(t('bought')); openShop(); }
+  else if (appStore?.lastError) track('purchase_fail', { product: p.id, why: appStore.lastError.slice(0, 80) });
 });
 
 // ---------- level map ----------
@@ -450,6 +456,7 @@ applyLook();
 // phone app: real haptics, status bar, splash, then the ad consent flow (EU form → iOS tracking prompt)
 void nativeHaptics().then(h => { if (h) fb.haptics = h; });
 void nativeChrome();
+void appStore?.start().then(() => { if ($('shop').classList.contains('on')) openShop(); });
 track('app_open', { level: save.level + 1, lang: save.lang, app: isNative() });
 if (admob) void admob.start().then(async () => { if (await admob.privacyOptionsRequired()) $('privacyOpts').style.display = ''; });
 // new weekly levels: download in the background, add them when they are verified
