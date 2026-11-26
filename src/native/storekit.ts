@@ -32,6 +32,10 @@ export class GrantedLog {
 
 export class StoreIAP implements IAPService {
   private prices = new Map<ProductId, string>();
+  /** true once the App Store has answered with our products (agreement active, products set up) */
+  get ready(): boolean { return this.prices.size > 0; }
+  /** last purchase was cancelled by the player (no error message then) */
+  cancelled = false;
   private pending: ProductId | null = null;
   private log = new GrantedLog(typeof localStorage === 'undefined' ? null : localStorage);
   /** last failure reason (not shown to players; sent to analytics) */
@@ -61,6 +65,7 @@ export class StoreIAP implements IAPService {
   async buy(p: Product): Promise<boolean> {
     if (this.pending) return false;
     this.pending = p.id;
+    this.cancelled = false;
     try {
       const { NativePurchases, PURCHASE_TYPE } = await import('@capgo/native-purchases');
       const tx = await NativePurchases.purchaseProduct({
@@ -70,7 +75,8 @@ export class StoreIAP implements IAPService {
       this.log.add(tx.transactionId);
       return true;
     } catch (e) {
-      this.lastError = String((e as Error)?.message ?? e); // includes the player pressing Cancel
+      this.lastError = String((e as Error)?.message ?? e);
+      this.cancelled = /cancel/i.test(this.lastError);
       return false;
     } finally { this.pending = null; }
   }

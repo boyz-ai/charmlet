@@ -144,5 +144,6 @@
   "newLevels": "새 레벨 {n}개가 도착했어요!",
   "noAd": "지금은 광고가 없어요. 잠시 후 다시 시도해요.",
   "soon": "곧",
-  "privacyOptions": "개인정보 옵션"
+  "privacyOptions": "개인정보 옵션",
+  "storeDown": "지금은 상점을 이용할 수 없습니다. 나중에 다시 시도해 주세요."
 }

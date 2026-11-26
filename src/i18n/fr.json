@@ -144,5 +144,6 @@
   "newLevels": "{n} nouveaux niveaux viennent d’arriver !",
   "noAd": "Aucune pub disponible pour l’instant, réessaie bientôt.",
   "soon": "Bientôt",
-  "privacyOptions": "Options de confidentialité"
+  "privacyOptions": "Options de confidentialité",
+  "storeDown": "La boutique n'est pas disponible pour le moment. Réessaie plus tard."
 }

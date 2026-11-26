@@ -287,7 +287,10 @@ $('shopList').addEventListener('click', async e => {
   if (!canBuy(save, p) || !IAP_READY) return;
   fb.unlock();
   if (await iap.buy(p)) { track('purchase', { product: p.id }); grant(save, p); persist(); fb.win(); toast(t('bought')); openShop(); }
-  else if (appStore?.lastError) track('purchase_fail', { product: p.id, why: appStore.lastError.slice(0, 80) });
+  else if (appStore) {
+    track('purchase_fail', { product: p.id, why: appStore.lastError.slice(0, 80), ready: appStore.ready });
+    if (!appStore.cancelled) toast(t('storeDown'));
+  }
 });
 
 // ---------- level map ----------

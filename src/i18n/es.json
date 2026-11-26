@@ -144,5 +144,6 @@
   "newLevels": "¡Han llegado {n} niveles nuevos!",
   "noAd": "No hay anuncios ahora, inténtalo pronto.",
   "soon": "Pronto",
-  "privacyOptions": "Opciones de privacidad"
+  "privacyOptions": "Opciones de privacidad",
+  "storeDown": "La tienda no está disponible ahora. Inténtalo más tarde."
 }

@@ -144,5 +144,6 @@
   "newLevels": "{n} new levels just arrived!",
   "noAd": "No ad available right now, try again soon.",
   "soon": "Soon",
-  "privacyOptions": "Privacy options"
+  "privacyOptions": "Privacy options",
+  "storeDown": "The store isn't available right now. Please try again later."
 }
