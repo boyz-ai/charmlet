@@ -206,3 +206,5 @@ html,body{overscroll-behavior:none}
   .hgrid button{min-height:76px}
   .bst{min-height:72px;font-size:15px}
 }
+/* small text link (restore purchases at the bottom of the shop) */
+.ov button.linkbtn{background:none;border:0;border-radius:0;box-shadow:none;padding:8px 12px;min-height:44px;font:inherit;font-size:14px;color:#f3dc9a;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
