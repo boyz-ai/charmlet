@@ -194,3 +194,15 @@ html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 html,body{overscroll-behavior:none}
 *{scrollbar-width:none}
 *::-webkit-scrollbar{display:none;width:0;height:0}
+
+/* iPad and other tablets: the board grows to fill the screen (it stays crisp: the canvas is drawn at its real size),
+   menus and sheets get wider columns and slightly larger text */
+@media (min-width:700px) and (min-height:800px){
+  .wrap{max-width:min(780px,calc((100dvh - 330px) * 360 / 500));padding-left:24px;padding-right:24px}
+  .ov.home > *:not(.homecv){max-width:560px}
+  .ov.sheet > *{max-width:640px}
+  .ov h2{font-size:40px}
+  .ov p{max-width:34ch;font-size:18px}
+  .hgrid button{min-height:76px}
+  .bst{min-height:72px;font-size:15px}
+}
