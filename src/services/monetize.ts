@@ -11,12 +11,12 @@ export interface AdService {
   showInterstitial(): Promise<void>;
 }
 
-/** Interstitial rules (GDD): never in the first 25 minutes, then at most every 3 levels and 150 s,
+/** Interstitial rules (GDD): never in the first 10 minutes, then at most every 2 levels and 90 s,
  *  only at a natural break (after a win), never right after the player declined the 2× reward,
  *  and never again for anyone who bought anything. */
-export const AD_FREE_MINUTES = 25;
-export const AD_EVERY_LEVELS = 3;
-export const AD_MIN_GAP_S = 150;
+export const AD_FREE_MINUTES = 10;
+export const AD_EVERY_LEVELS = 2;
+export const AD_MIN_GAP_S = 90;
 export function interstitialDue(s: SaveData, nowS: number, lastAdS: number, declinedDouble: boolean): boolean {
   if (s.paid || declinedDouble) return false;
   if (s.playTime < AD_FREE_MINUTES * 60) return false;

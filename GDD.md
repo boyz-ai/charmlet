@@ -63,7 +63,7 @@ Every Monday a GitHub Actions workflow generates the next pack of 50 levels (too
 English, Turkish, German, French, Spanish, Portuguese, Italian, Russian, Japanese, Korean, Simplified Chinese, Indonesian; device language is detected automatically. Translations are Claude's; native speakers should review the store texts of the main markets before launch.
 
 ## Monetization (IAA + IAP)
-- Implemented (test mode until the native build): rewarded +3 moves on the out-of-moves screen, rewarded 2× coins on the win screen (not offered when a forced ad is due), forced ads only after 25 min of play, every 3+ levels and 150+ s apart, never for payers. Shop: Starter $2.99 (once) · No Ads $4.99 (once) · 2,500 coins $9.99 · 6,000 coins $19.99 · 18,000 coins $49.99.
+- Implemented (test mode until the native build): rewarded +3 moves on the out-of-moves screen, rewarded 2× coins on the win screen (not offered when a forced ad is due), forced ads only after 10 min of play, every 2+ levels and 90+ s apart, never for payers. Shop: Starter $2.99 (once) · No Ads $4.99 (once) · 2,500 coins $9.99 · 6,000 coins $19.99 · 18,000 coins $49.99.
 - Level map: chapters of 50 levels; finished levels can be replayed without rewards.
 - Rewarded video: +3 moves on fail, 2x coins at level end (optional), extra tray slot for one level.
 - Interstitial: none in the first 20–30 minutes; afterwards every 2–3 levels at natural breaks only; never after the player declines "2x".
