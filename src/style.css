@@ -208,3 +208,6 @@ html,body{overscroll-behavior:none}
 }
 /* small text link (restore purchases at the bottom of the shop) */
 .ov button.linkbtn{background:none;border:0;border-radius:0;box-shadow:none;padding:8px 12px;min-height:44px;font:inherit;font-size:14px;color:#f3dc9a;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* a purchase is in progress: price buttons wait */
+#shopList.busy button{opacity:.55;pointer-events:none}

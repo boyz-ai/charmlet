@@ -193,7 +193,8 @@ function onWin(): void {
     if (adNext) { track('ad_interstitial', { level: level + 1 }); await ads.showInterstitial(); lastAdS = performance.now() / 1000; save.levelsSinceAd = 0; persist(); }
     playNext();
   };
-  if (adNext) show(t('winTitle'), text, last ? t('again') : t('next'), () => void next());
+  // no 2× offer when a forced ad is due, or when no rewarded video is loaded (never a button that leads nowhere)
+  if (adNext || !ads.rewardedReady()) show(t('winTitle'), text, last ? t('again') : t('next'), () => void next());
   else show(t('winTitle'), text, last ? t('again') : t('next'), () => playNext(), t('doubleCoins', { n: coins }), async () => {
     if (await rewarded('double')) { save.coins += coins; persist(); hud(); toast(t('doubled')); } else if (isNative()) noAdToast();
     playNext();
@@ -219,9 +220,15 @@ function onLose(reason: 'tray' | 'moves' | 'bomb'): void {
     const cont = (): void => { game.addMoves(CONTINUE_MOVES); hideOverlay(); hud(); };
     // coins first; without coins a rewarded ad will go here (M7) — for now a free test button
     const watch = async (): Promise<void> => { if (await rewarded('continue')) cont(); else if (isNative()) noAdToast(); };
-    if (save.coins >= CONTINUE_PRICE)
+    const coinsBtn = (): void => { if (buyContinue(save)) { persist(); cont(); } };
+    if (!ads.rewardedReady()) {
+      // no video loaded right now: only the coin option (if affordable) and retry
+      if (save.coins >= CONTINUE_PRICE)
+        show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('continueCoins', { n: CONTINUE_MOVES, p: CONTINUE_PRICE }), coinsBtn, t('retry'), retry);
+      else show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('retry'), retry);
+    } else if (save.coins >= CONTINUE_PRICE)
       show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('watchMoves'), () => void watch(),
-        t('continueCoins', { n: CONTINUE_MOVES, p: CONTINUE_PRICE }), () => { if (buyContinue(save)) { persist(); cont(); } }, t('retry'), retry);
+        t('continueCoins', { n: CONTINUE_MOVES, p: CONTINUE_PRICE }), coinsBtn, t('retry'), retry);
     else
       show(t('outOfMovesTitle'), burn + t('ringsLeft', { n: left }), t('watchMoves'), () => void watch(), t('retry'), retry);
   }
@@ -279,14 +286,20 @@ function openShop(): void {
   $('shop').classList.add('on');
 }
 function closeShop(): void { $('shop').classList.remove('on'); hud(); homeTexts(); }
+/** One purchase at a time: a second tap while Apple's sheet is opening must not show "store unavailable". */
+let buying = false;
 $('shopList').addEventListener('click', async e => {
+  if (buying) return;
   const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-p]');
   const p = PRODUCTS.find(x => x.id === btn?.dataset.p);
   if (!p) return;
   track('shop_tap', { product: p.id, ready: IAP_READY });
   if (!canBuy(save, p) || !IAP_READY) return;
   fb.unlock();
-  if (await iap.buy(p)) { track('purchase', { product: p.id }); grant(save, p); persist(); fb.win(); toast(t('bought')); openShop(); }
+  buying = true; $('shopList').classList.add('busy');
+  let ok = false;
+  try { ok = await iap.buy(p); } finally { buying = false; $('shopList').classList.remove('busy'); }
+  if (ok) { track('purchase', { product: p.id }); grant(save, p); persist(); fb.win(); toast(t('bought')); openShop(); }
   else if (appStore) {
     track('purchase_fail', { product: p.id, why: appStore.lastError.slice(0, 80), ready: appStore.ready });
     if (!appStore.cancelled) toast(t('storeDown'));

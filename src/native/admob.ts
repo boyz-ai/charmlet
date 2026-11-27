@@ -39,6 +39,7 @@ export class AdMobAds implements AdService {
 
   private async load(kind: 'rewarded' | 'interstitial'): Promise<void> {
     if (!this.canAds || this.ready[kind]) return;
+    this.lastTry[kind] = Date.now();
     try {
       if (kind === 'rewarded') await AdMob.prepareRewardVideoAd({ adId: ADMOB.rewarded, isTesting: ADMOB.testing });
       else await AdMob.prepareInterstitial({ adId: ADMOB.interstitial, isTesting: ADMOB.testing });
@@ -49,6 +50,13 @@ export class AdMobAds implements AdService {
   private note(step: string, e: unknown): void {
     const m = e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e);
     this.lastError = `${step}: ${m}`.slice(0, 140);
+  }
+
+  private lastTry = { rewarded: 0, interstitial: 0 };
+  /** Loaded and showable now. If not, quietly try loading again (at most every 30 s) so the next offer has one. */
+  rewardedReady(): boolean {
+    if (!this.ready.rewarded && this.canAds && Date.now() - this.lastTry.rewarded > 30_000) void this.load('rewarded');
+    return this.ready.rewarded;
   }
 
   async showRewarded(): Promise<boolean> {
@@ -63,7 +71,7 @@ export class AdMobAds implements AdService {
 
   async showInterstitial(): Promise<void> {
     await this.start();
-    if (!this.ready.interstitial) return; // never wait for an ad between levels
+    if (!this.ready.interstitial) { if (Date.now() - this.lastTry.interstitial > 30_000) void this.load('interstitial'); return; } // never wait for an ad between levels
     this.ready.interstitial = false;
     try { await AdMob.showInterstitial(); } catch { /* ignore */ } finally { void this.load('interstitial'); }
   }

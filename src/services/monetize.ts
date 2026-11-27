@@ -9,6 +9,8 @@ export interface AdService {
   /** Show a rewarded video. Resolves true only if the player watched it to the end. */
   showRewarded(placement: RewardPlacement): Promise<boolean>;
   showInterstitial(): Promise<void>;
+  /** A rewarded video is loaded and can be shown now (offer "watch an ad" buttons only then). */
+  rewardedReady(): boolean;
 }
 
 /** Interstitial rules (GDD): never in the first 10 minutes, then at most every 2 levels and 90 s,
@@ -102,6 +104,7 @@ export class TestAds implements AdService {
   constructor(private d: TestDialog) {}
   showRewarded(): Promise<boolean> { return this.d.ad(3, true); }
   async showInterstitial(): Promise<void> { await this.d.ad(3, false); }
+  rewardedReady(): boolean { return true; }
 }
 export class TestIAP implements IAPService {
   /** pretend store account (kept apart from the game save, like a real store would be) */
